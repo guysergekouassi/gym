@@ -2,39 +2,39 @@
 
 Abonnés et journaliers, pointage par empreinte, encaissement en caisse avec reçu, historique des passages et KPI (actifs, moins actifs, renouvellements).
 
-## 1. Créer le projet Laravel
+## 1. Installer le projet
+
+Prérequis : PHP 8.3+, Composer, et MySQL si tu ne veux pas SQLite (Laragon ou XAMPP font l'affaire).
 
 ```bash
-composer create-project laravel/laravel gymflow
-cd gymflow
+git clone https://github.com/guysergekouassi/gym.git
+cd gym
+composer install
+copy .env.example .env      # Windows (Linux/Mac : cp .env.example .env)
+php artisan key:generate
 ```
 
-## 2. Copier les fichiers de ce dossier
+## 2. Configurer le `.env`
 
-Copie tout le contenu de ce zip à la racine du projet en **écrasant** les fichiers existants :
-`app/`, `bootstrap/app.php`, `config/salle.php`, `database/`, `resources/views/`, `routes/`.
-
-## 3. Configurer le `.env`
+Par défaut le projet utilise SQLite (aucune installation : à la question de `php artisan migrate`, réponds `yes` pour créer le fichier). Pour MySQL, crée la base `gymflow` puis :
 
 ```dotenv
-APP_NAME=GymFlow
-APP_LOCALE=fr
-APP_FAKER_LOCALE=fr_FR
-
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=gymflow
 DB_USERNAME=root
 DB_PASSWORD=
+```
 
-SALLE_NOM="GymFlow"
-SALLE_ADRESSE="Cocody, Abidjan"
-SALLE_TELEPHONE="07 00 00 00 00"
-SALLE_TARIF_JOURNALIER=2000
+Les réglages de la salle sont déjà dans `.env.example` (`SALLE_NOM`, `SALLE_ADRESSE`, `SALLE_TELEPHONE`, `SALLE_TARIF_JOURNALIER`, `RECU_DRIVER`).
 
-# Reçus : navigateur (par défaut) ou escpos
-RECU_DRIVER=navigateur
+L'interface charge Tailwind depuis son CDN : le poste doit avoir accès à internet pour l'affichage.
+
+## 3. Lancer les tests
+
+```bash
+php artisan test
 ```
 
 ## 4. Installer la base
@@ -125,4 +125,5 @@ config/salle.php
 database/migrations, database/seeders
 resources/views/     dashboard, caisse, clients, accueil, recus, auth, layouts
 routes/              web.php, api.php, console.php
+tests/Feature/       GymFlowTest.php
 ```
