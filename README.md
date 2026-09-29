@@ -54,10 +54,60 @@ Comptes créés (à changer immédiatement) :
 | Admin | admin@gymflow.local | ChangeMoi!2026 |
 | Caissière | caisse@gymflow.local | ChangeMoi!2026 |
 
+## 4 bis. Espaces et caisses
+
+- **Espace administrateur** : tableau de bord, passages, clients, **Caisses** et **Caissières**. L'administrateur n'encaisse pas.
+- **Espace caisse** : caisse, clients et passages du jour. Une caissière n'encaisse que sur la caisse qui lui est attribuée ; sans caisse active, la page caisse est bloquée.
+- L'administrateur crée autant de caisses qu'il veut (`/admin/caisses`), puis un compte par caissière (`/admin/caissiers`) rattaché à une caisse. Chaque paiement enregistre sa caisse : le journal d'une caisse montre, jour par jour, les espèces à remettre et le Mobile Money encaissé.
+- À l'installation, la caissière de démonstration est rattachée à « Caisse principale ».
+
+## 4 ter. Fonctionnalités
+
+| Domaine | Ce que fait GymFlow | Où |
+|---|---|---|
+| Caisse | Abonnements, carnets d'entrées, packs de coaching, ventes au bar avec stock, codes promo, frais d'inscription | Caisse |
+| Fiabilité | Annulation d'un reçu avec motif (la caissière le jour même, l'admin toujours), clôture journalière avec comptage des billets FCFA et écart, journal des actions | Reçu, Clôturer la caisse, Journal |
+| Accès | Empreinte, badge RFID ou QR code personnel ; gel d'abonnement ; ouverture de porte optionnelle ; écran d'accueil qui tient pendant une coupure réseau | Écran d'accueil (`/accueil`), fiche client |
+| Relation membre | Rappels (échéance J-3 et J0, inactifs, anniversaires, essais), campagnes ciblées, lien WhatsApp en un clic | À faire, Campagnes |
+| Ventes | Prospects et séances d'essai, parrainage | Prospects, fiche client |
+| Cours | Planning hebdomadaire, réservations, liste d'attente, présences, coachs et commissions | Planning, Coachs et cours |
+| Membre | Espace mobile installable : jours restants, QR code, réservation, progression, renouvellement en ligne | `/membre` (lien personnel envoyé par WhatsApp) |
+| Pilotage | Plusieurs salles, rapports (recettes sur 12 mois, rétention, heures creuses, recette attendue), exports Excel | Tableau de bord, Rapports, Exports |
+| Recherche | Ctrl + K ou « / » partout : client par nom, téléphone, n° d'empreinte ou de carte | Toutes les pages |
+
+### Tâche planifiée (rappels du matin)
+
+Les rappels sont préparés chaque jour à `RAPPELS_HEURE` par `php artisan salle:rappels`. Il faut que le planificateur Laravel tourne chaque minute :
+
+- **Windows** : Planificateur de tâches → nouvelle tâche toutes les minutes : `php C:\chemin\vers\gym\artisan schedule:run`.
+- **Linux** : `* * * * * cd /chemin/vers/gym && php artisan schedule:run >> /dev/null 2>&1`.
+
+### WhatsApp
+
+- `MESSAGERIE_DRIVER=manuel` (défaut) : les messages attendent dans **À faire** ; un clic ouvre WhatsApp avec le texte prêt.
+- `MESSAGERIE_DRIVER=whatsapp_cloud` : envoi automatique via l'API WhatsApp Business de Meta (`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`). Meta impose des **modèles de messages approuvés** pour écrire à un client qui ne vous a pas écrit dans les 24 h : faites valider vos modèles avant d'activer ce mode.
+- Les textes des messages se modifient dans `config/salle.php` (`messagerie.modeles`).
+
+### Paiement en ligne (CinetPay)
+
+Renseignez `CINETPAY_APIKEY` et `CINETPAY_SITE_ID` (compte marchand CinetPay). L'adresse de notification `https://votre-domaine/paiement/notification` doit être **accessible depuis internet en HTTPS** : ce mode ne fonctionne pas sur un serveur uniquement local. Chaque notification est revérifiée auprès de CinetPay avant d'enregistrer l'abonnement. Les paiements en ligne arrivent dans la caisse « Paiements en ligne ».
+
+### Porte ou tourniquet
+
+`PORTE_DRIVER=http` et `PORTE_URL=http://192.168.1.50/relay/0?turn=on&timer=3` : GymFlow appelle cette URL à chaque accès autorisé (relais réseau type Shelly ou contrôleur de porte). L'API renvoie aussi `ouvrir_porte: true` pour les lecteurs qui pilotent eux-mêmes la porte.
+
+### Commandes utiles
+
+```bash
+php artisan salle:rappels                         # préparer les rappels du jour maintenant
+php artisan salle:mot-de-passe admin@gymflow.local # nouveau mot de passe si un compte est bloqué
+php artisan salle:lecteur "Entrée secondaire"      # créer un lecteur (aussi possible dans Salles et lecteurs)
+```
+
 ## 5. Tester le pointage sans lecteur
 
 1. Crée un client abonné avec `ID empreinte = 1`, puis abonne-le depuis la caisse.
-2. Ouvre l'**écran d'accueil** (menu) dans un autre onglet.
+2. Ouvre l'**écran d'accueil** dans un autre onglet : http://127.0.0.1:8000/accueil (connecté en caissière ou admin).
 3. Simule un scan :
 
 ```bash

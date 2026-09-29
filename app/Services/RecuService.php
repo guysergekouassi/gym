@@ -23,7 +23,7 @@ class RecuService
             throw new RuntimeException('Le package mike42/escpos-php n\'est pas installé.');
         }
 
-        $paiement->loadMissing(['client', 'user', 'abonnement.formule']);
+        $paiement->loadMissing(['client', 'user', 'caisse', 'abonnement.formule']);
         $config = config('salle.impression');
 
         $connecteur = match ($config['connecteur']) {
@@ -74,7 +74,8 @@ class RecuService
             $imprimante->setTextSize(2, 2);
             $imprimante->text($t(Fcfa::format($paiement->montant))."\n");
             $imprimante->setTextSize(1, 1);
-            $imprimante->text('Caisse : '.$t($paiement->user?->name)."\n\n");
+            $imprimante->text('Caisse : '.$t($paiement->caisse?->nom ?? '-')."\n");
+            $imprimante->text('Caissiere : '.$t($paiement->user?->name)."\n\n");
             $imprimante->text("Merci et bonne seance !\n");
             $imprimante->feed(3);
             $imprimante->cut();

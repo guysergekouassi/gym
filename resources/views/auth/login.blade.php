@@ -1,34 +1,47 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Connexion · {{ config('salle.nom') }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
-<form method="POST" action="{{ route('login') }}" class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-8 space-y-4">
+@extends('layouts.auth')
+@section('title', 'Connexion')
+
+@section('content')
+<div>
+    <h2>Heureux de vous revoir !</h2>
+    <p class="muted" style="margin:6px 0 0">Connectez-vous pour accéder à votre espace de gestion.</p>
+</div>
+
+@if(session('succes'))
+    <div class="flash ok" role="status">{{ session('succes') }}</div>
+@endif
+@error('email')
+    <div class="flash ko" role="alert">{{ $message }}</div>
+@enderror
+
+<form method="POST" action="{{ route('login') }}" class="grid" style="gap:14px">
     @csrf
-    <h1 class="text-2xl font-bold text-center">{{ config('salle.nom') }}</h1>
-    <p class="text-center text-slate-500 text-sm">Connexion au poste de gestion</p>
-
-    @error('email')
-        <div class="rounded bg-red-100 text-red-800 px-3 py-2 text-sm">{{ $message }}</div>
-    @enderror
-
-    <label class="block">
-        <span class="text-sm font-medium">E-mail</span>
-        <input type="email" name="email" value="{{ old('email') }}" required autofocus
-               class="mt-1 w-full rounded-lg border-slate-300 border px-3 py-2">
+    <label class="fld" for="email">Adresse e-mail
+        <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username">
     </label>
-    <label class="block">
-        <span class="text-sm font-medium">Mot de passe</span>
-        <input type="password" name="password" required class="mt-1 w-full rounded-lg border-slate-300 border px-3 py-2">
+    <label class="fld" for="password">Mot de passe
+        <span class="pw">
+            <input id="password" type="password" name="password" required autocomplete="current-password" style="width:100%">
+            <button type="button" data-voir aria-label="Afficher le mot de passe" aria-pressed="false">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+        </span>
     </label>
-    <label class="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="remember"> Rester connecté
-    </label>
-    <button class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5">Se connecter</button>
+    <div class="auth-links">
+        <label class="check" for="remember" style="min-height:0"><input id="remember" type="checkbox" name="remember"> Rester connecté</label>
+        <a href="{{ route('password.request') }}">Mot de passe oublié ?</a>
+    </div>
+    <button class="btn xl">Se connecter</button>
 </form>
-</body>
-</html>
+
+<p class="auth-foot">Vous êtes membre ? <a href="{{ route('membre.connexion') }}">Accédez à votre espace membre</a></p>
+
+<script>
+document.querySelector('[data-voir]').addEventListener('click', (e) => {
+    const b = e.currentTarget, champ = document.getElementById('password');
+    const voir = champ.type === 'password';
+    champ.type = voir ? 'text' : 'password';
+    b.setAttribute('aria-pressed', voir); b.setAttribute('aria-label', voir ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+});
+</script>
+@endsection

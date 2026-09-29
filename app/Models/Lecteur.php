@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class Lecteur extends Model
 {
-    protected $fillable = ['nom', 'token_hash', 'actif', 'derniere_activite_at'];
+    protected $fillable = ['nom', 'token_hash', 'actif', 'derniere_activite_at', 'salle_id'];
 
     protected $hidden = ['token_hash'];
 
@@ -18,6 +18,11 @@ class Lecteur extends Model
             'actif' => 'boolean',
             'derniere_activite_at' => 'datetime',
         ];
+    }
+
+    public function salle(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Salle::class);
     }
 
     public function passages(): HasMany
@@ -30,7 +35,7 @@ class Lecteur extends Model
      *
      * @return array{0: Lecteur, 1: string}
      */
-    public static function creerAvecToken(string $nom): array
+    public static function creerAvecToken(string $nom, ?int $salleId = null): array
     {
         $token = Str::random(48);
 
@@ -38,6 +43,7 @@ class Lecteur extends Model
             'nom' => $nom,
             'token_hash' => hash('sha256', $token),
             'actif' => true,
+            'salle_id' => $salleId,
         ]);
 
         return [$lecteur, $token];

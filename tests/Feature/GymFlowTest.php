@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Abonnement;
+use App\Models\Caisse;
 use App\Models\Client;
 use App\Models\Formule;
 use App\Models\Lecteur;
@@ -58,24 +59,146 @@ class GymFlowTest extends TestCase
 
     public function test_la_caissiere_na_pas_acces_au_tableau_de_bord(): void
     {
-        $this->actingAs($this->caissiere)->get('/dashboard')->assertForbidden();
+        $this->actingAs($this->caissiere)->get('/dashboard')->assertForbidden()
+            ->assertSee('Retourner à mon espace')->assertSee('Se déconnecter');
+    }
+
+    public function test_page_de_connexion_quand_on_est_deja_connecte(): void
+    {
+        // Déjà connecté : /login renvoie vers « / », qui aiguille selon le rôle (jamais vers une page interdite)
+        $this->actingAs($this->caissiere)->get('/login')->assertRedirect('/');
+        $this->get('/')->assertRedirect(route('caisse.index'));
+
+        $this->actingAs($this->admin)->get('/login')->assertRedirect('/');
+        $this->get('/')->assertRedirect(route('dashboard'));
     }
 
     public function test_toutes_les_pages_saffichent(): void
     {
         $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Kouassi', 'prenoms' => 'Guy', 'empreinte_id' => '1']);
+        $this->scanner('1');
+        $this->scanner('404');
 
-        $this->actingAs($this->admin)->post('/caisse/abonnement', [
+        $this->actingAs($this->caissiere)->post('/caisse/abonnement', [
             'client_id' => $client->id,
             'formule_id' => Formule::where('nom', 'Mensuel')->value('id'),
             'mode' => 'especes',
         ]);
         $paiement = Paiement::firstOrFail();
+        $this->scanner('1');
+        $caisse = Caisse::firstOrFail();
 
-        foreach (['/dashboard', '/caisse', '/clients', '/clients/create', "/clients/{$client->id}",
-            "/clients/{$client->id}/edit", '/accueil', '/accueil/dernier', "/recus/{$paiement->numero_recu}"] as $url) {
+        $communes = ['/clients', '/clients/create', "/clients/{$client->id}", "/clients/{$client->id}/edit",
+            '/passages', '/passages?vue=client', '/passages?filtre=refuse', '/passages?date='.today()->subDay()->toDateString(),
+            '/accueil', '/accueil/dernier', "/recus/{$paiement->numero_recu}"];
+
+        foreach (['/caisse', "/caisse?client_id={$client->id}", ...$communes] as $url) {
             $this->get($url)->assertOk();
         }
+
+        $this->actingAs($this->admin);
+        foreach (['/dashboard', '/dashboard?du='.today()->subDays(7)->toDateString(), '/admin/caisses', '/admin/caisses/create',
+            "/admin/caisses/{$caisse->id}", "/admin/caisses/{$caisse->id}/edit", '/admin/caissiers', '/admin/caissiers/create',
+            "/admin/caissiers/{$this->caissiere->id}/edit", ...$communes] as $url) {
+            $this->get($url)->assertOk();
+        }
+    }
+
+    public function test_les_espaces_admin_et_caisse_sont_separes(): void
+    {
+        $this->actingAs($this->admin)->get('/caisse')->assertForbidden();
+        $this->actingAs($this->admin)->post('/caisse/journalier', ['montant' => 2000, 'mode' => 'especes'])->assertForbidden();
+
+        $this->actingAs($this->caissiere);
+        foreach (['/dashboard', '/admin/caisses', '/admin/caissiers'] as $url) {
+            $this->get($url)->assertForbidden();
+        }
+    }
+
+    public function test_une_caissiere_sans_caisse_active_ne_peut_pas_encaisser(): void
+    {
+        $this->caissiere->caisse->update(['actif' => false]);
+
+        $this->actingAs($this->caissiere)->get('/caisse')->assertForbidden()->assertSee('Aucune caisse active');
+        $this->post('/caisse/journalier', ['montant' => 2000, 'mode' => 'especes'])->assertForbidden();
+        $this->assertSame(0, Paiement::count());
+    }
+
+    public function test_ladmin_cree_plusieurs_caisses_et_leurs_caissieres(): void
+    {
+        $this->actingAs($this->admin)
+            ->post('/admin/caisses', ['nom' => 'Caisse bar', 'emplacement' => 'Étage', 'actif' => '1'])
+            ->assertRedirect(route('admin.caisses.index'));
+        $bar = Caisse::where('nom', 'Caisse bar')->firstOrFail();
+        $this->post('/admin/caisses', ['nom' => 'Caisse bar'])->assertSessionHasErrors('nom');
+
+        $this->post('/admin/caissiers', [
+            'name' => 'Mariam', 'email' => 'mariam@gymflow.local', 'caisse_id' => $bar->id, 'actif' => '1',
+            'password' => 'MotDePasse!1', 'password_confirmation' => 'MotDePasse!1',
+        ])->assertRedirect(route('admin.caissiers.index'));
+
+        $mariam = User::where('email', 'mariam@gymflow.local')->firstOrFail();
+        $this->assertTrue($mariam->isCaissier());
+        $this->assertSame($bar->id, $mariam->caisse_id);
+
+        // Chaque paiement est rattaché à la caisse de la caissière
+        $this->actingAs($mariam)->post('/caisse/journalier', ['montant' => 2000, 'mode' => 'wave'])->assertRedirect();
+        $this->actingAs($this->caissiere)->post('/caisse/journalier', ['montant' => 2000, 'mode' => 'especes'])->assertRedirect();
+        $this->assertSame(1, Paiement::where('caisse_id', $bar->id)->count());
+        $this->assertSame(1, Paiement::where('caisse_id', $this->caissiere->caisse_id)->count());
+
+        $this->actingAs($this->admin)->get("/admin/caisses/{$bar->id}")->assertOk()
+            ->assertViewHas('resume', fn ($r) => $r['total'] === 2000 && $r['electronique'] === 2000 && $r['especes'] === 0);
+
+        // Désactiver le compte bloque la connexion
+        $this->put("/admin/caissiers/{$mariam->id}", [
+            'name' => 'Mariam', 'email' => 'mariam@gymflow.local', 'caisse_id' => $bar->id,
+        ])->assertRedirect();
+        $this->assertFalse($mariam->fresh()->actif);
+        $this->assertTrue(password_verify('MotDePasse!1', $mariam->fresh()->password));
+        $this->post('/logout');
+        $this->post('/login', ['email' => 'mariam@gymflow.local', 'password' => 'MotDePasse!1'])->assertSessionHasErrors('email');
+    }
+
+    public function test_les_erreurs_de_saisie_sont_en_francais(): void
+    {
+        Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Existant', 'telephone' => '0700000009']);
+
+        $this->actingAs($this->caissiere)->from('/clients/create')->post('/clients', [
+            'type' => Client::TYPE_ABONNE,
+            'nom' => '',
+            'telephone' => '0700000009',
+            'date_naissance' => today()->toDateString(),
+        ])->assertRedirect('/clients/create')->assertSessionHasErrors([
+            'nom' => 'Le champ nom est obligatoire.',
+            'telephone' => 'Ce numéro de téléphone est déjà attribué à un autre client.',
+            'date_naissance' => "La date de naissance doit être antérieure à aujourd'hui.",
+        ]);
+    }
+
+    public function test_passages_du_jour_et_refus_a_regulariser(): void
+    {
+        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Diallo', 'prenoms' => 'Fatou', 'empreinte_id' => '5']);
+        $this->scanner('5')->assertJson(['autorise' => false]);
+        $this->scanner('77')->assertJson(['motif' => 'empreinte_inconnue']);
+
+        $this->actingAs($this->caissiere)->get('/caisse')->assertOk()
+            ->assertViewHas('aRegulariser', fn ($refus) => $refus->count() === 2)
+            ->assertSee('Diallo Fatou')->assertSee('Empreinte n° 77');
+
+        $this->get('/passages?filtre=refuse')->assertOk()->assertSee('Diallo Fatou')
+            ->assertViewHas('stats', fn ($s) => $s['refus'] === 2 && $s['entrees'] === 0);
+
+        // Après renouvellement, le refus n'est plus à régulariser
+        $this->post('/caisse/abonnement', [
+            'client_id' => $client->id, 'formule_id' => Formule::where('nom', 'Mensuel')->value('id'), 'mode' => 'especes',
+        ]);
+        $this->scanner('5')->assertJson(['autorise' => true]);
+
+        $this->get('/caisse')->assertViewHas('aRegulariser', fn ($refus) => $refus->count() === 1);
+        $this->get('/passages?vue=client')->assertOk()
+            ->assertViewHas('parClient', fn ($lignes) => $lignes->count() === 2)
+            ->assertViewHas('venues7j', fn ($v) => (int) $v[$client->id] === 1);
     }
 
     public function test_abonnement_puis_scan_autorise(): void
