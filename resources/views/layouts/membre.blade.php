@@ -3,7 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#E50914">
+    <meta name="theme-color" content="#F01416">
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon-32.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/icone-192.png') }}">
     <title>@yield('title', 'Mon espace') · {{ config('salle.nom') }}</title>
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,7 +30,7 @@
 <body class="gf m">
 <div class="m-wrap">
     <div class="m-top">
-        <b><span class="logo">@include('partials.icone', ['nom' => 'biceps', 'trait' => 2.2])</span>{{ config('salle.nom') }}</b>
+        <b><span class="logo"><img src="{{ asset('images/picto-epikaizo.png') }}" alt=""></span>{{ config('salle.nom') }}</b>
         @isset($membre)
             <form method="POST" action="{{ route('membre.deconnexion') }}">@csrf<button class="logout" style="color:var(--muted)">Se déconnecter</button></form>
         @endisset

@@ -2,7 +2,7 @@
 
 return [
 
-    'nom' => env('SALLE_NOM', 'GymFlow'),
+    'nom' => env('SALLE_NOM', 'Gymnase EPIKAÏZO'),
     'adresse' => env('SALLE_ADRESSE', "Abidjan, Côte d'Ivoire"),
     'telephone' => env('SALLE_TELEPHONE', ''),
 

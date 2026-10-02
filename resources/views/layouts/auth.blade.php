@@ -4,6 +4,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon-32.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/icone-192.png') }}">
     <title>@yield('title', 'Connexion') · {{ config('salle.nom') }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet"
@@ -15,9 +17,9 @@
     <div class="auth-wrap">
         <section class="auth-hero" aria-label="Présentation">
             <h1>Avec {{ config('salle.nom') }}, gérez votre salle <span>en quelques clics.</span></h1>
-            <p>Pointage par empreinte ou par carte, caisse en FCFA a, suivi des membres.</p>
+            <p>Pointage par empreinte ou par carte, caisse en FCFA, suivi des membres.</p>
             <div class="illus" aria-hidden="true">
-                <div class="tuile grande">@include('partials.icone', ['nom' => 'biceps', 'trait' => 2.4])</div>
+                <div class="tuile grande"><img src="{{ asset('images/picto-epikaizo.png') }}" alt=""></div>
                 <div class="tuile petite">@include('partials.icone', ['nom' => 'empreinte', 'trait' => 1.8])</div>
                 <div class="annot a1">
                     <svg width="46" height="30" viewBox="0 0 46 30" fill="none" stroke="currentColor" stroke-width="1.5"
@@ -40,8 +42,7 @@
 
         <main class="auth-card">
             <div class="auth-logo">
-                <div class="logo">@include('partials.icone', ['nom' => 'biceps', 'trait' => 2.2])</div>
-                {{ mb_strtoupper(config('salle.nom')) }}
+                <img src="{{ asset('images/logo-epikaizo.png') }}" alt="{{ config('salle.nom') }}">
             </div>
             @yield('content')
         </main>

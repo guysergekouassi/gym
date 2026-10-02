@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon-32.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/icone-192.png') }}">
     <title>@yield('title', 'Accueil') · {{ config('salle.nom') }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
@@ -19,7 +21,7 @@
 <div class="app">
     <aside class="side">
         <div class="brand">
-            <div class="logo">@include('partials.icone', ['nom' => 'biceps', 'trait' => 2.2])</div>
+            <div class="logo"><img src="{{ asset('images/picto-epikaizo.png') }}" alt=""></div>
             <div><b>{{ config('salle.nom') }}</b><small>{{ config('salle.adresse') }}</small></div>
         </div>
 

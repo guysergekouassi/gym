@@ -30,11 +30,11 @@
     .gf-pop .swal2-actions button { flex: 1; min-height: 48px; border-radius: 14px; font: 700 14.5px var(--f-body, "DM Sans", sans-serif); border: 0; cursor: pointer; margin: 0; transition: transform .15s cubic-bezier(.2, .8, .2, 1), box-shadow .2s, filter .2s }
     .gf-pop .swal2-actions button:hover { transform: translateY(-1px); filter: brightness(1.05) }
     .gf-pop .swal2-actions button:active { transform: scale(.98) }
-    .gf-ok { background: linear-gradient(135deg, #FF2E3B, #E50914); color: #fff; box-shadow: 0 12px 24px -12px rgb(229 9 20 / .8) }
-    .gf-danger { background: linear-gradient(135deg, #EF4444, #B91C1C); color: #fff; box-shadow: 0 12px 24px -12px rgb(229 9 20 / .8) }
+    .gf-ok { background: linear-gradient(135deg, #FF2E3B, #F01416); color: #fff; box-shadow: 0 12px 24px -12px rgb(240 20 22 / .8) }
+    .gf-danger { background: linear-gradient(135deg, #EF4444, #B91C1C); color: #fff; box-shadow: 0 12px 24px -12px rgb(240 20 22 / .8) }
     .gf-annuler { background: var(--surface-2, #1B1D26); color: var(--fg, #F3F4F6); border: 1px solid var(--line-2, rgb(255 255 255 / .12)) !important }
     .gf-annuler:hover { background: #242734 !important }
-    .gf-pop .swal2-actions button:focus-visible { outline: 3px solid rgb(229 9 20 / .45); outline-offset: 2px }
+    .gf-pop .swal2-actions button:focus-visible { outline: 3px solid rgb(240 20 22 / .45); outline-offset: 2px }
     .gf-pop .swal2-loader { border-color: #FF2E3B transparent #B91C1C transparent }
 
     /* Icônes : pastille colorée animée à la place des icônes par défaut */
@@ -43,15 +43,15 @@
     .gf-icone svg { width: 34px; height: 34px }
     /* Spécificité renforcée : les couleurs par défaut de SweetAlert (.swal2-icon.swal2-warning…) ne doivent pas l'emporter */
     .swal2-icon.gf-icone.gf-i-succes, .swal2-icon.gf-icone.gf-i-erreur, .swal2-icon.gf-icone.gf-i-alerte, .swal2-icon.gf-icone.gf-i-question, .swal2-icon.gf-icone.gf-i-attente { color: var(--gf-i) !important }
-    .gf-i-succes { --gf-i: #FF2E3B; background: linear-gradient(135deg, rgb(229 9 20 / .2), rgb(35 38 50 / .6)); color: #FF2E3B; --onde: rgb(229 9 20 / .35) }
+    .gf-i-succes { --gf-i: #FF2E3B; background: linear-gradient(135deg, rgb(240 20 22 / .2), rgb(35 38 50 / .6)); color: #FF2E3B; --onde: rgb(240 20 22 / .35) }
     .gf-i-erreur { --gf-i: #EF4444; background: linear-gradient(135deg, rgb(239 68 68 / .2), rgb(45 20 22 / .6)); color: #EF4444; --onde: rgb(239 68 68 / .35) }
     .gf-i-alerte { --gf-i: #F59E0B; background: linear-gradient(135deg, rgb(245 158 11 / .2), rgb(45 35 20 / .6)); color: #F59E0B; --onde: rgb(245 158 11 / .35) }
-    .gf-i-question { --gf-i: #E50914; background: linear-gradient(135deg, rgb(229 9 20 / .2), rgb(35 38 50 / .6)); color: #E50914; --onde: rgb(229 9 20 / .3) }
-    .gf-i-attente { --gf-i: #FF4D58; background: linear-gradient(135deg, rgb(229 9 20 / .15), rgb(30 32 42 / .6)); color: #FF4D58; --onde: rgb(229 9 20 / .35) }
+    .gf-i-question { --gf-i: #F01416; background: linear-gradient(135deg, rgb(240 20 22 / .2), rgb(35 38 50 / .6)); color: #F01416; --onde: rgb(240 20 22 / .3) }
+    .gf-i-attente { --gf-i: #FF4D58; background: linear-gradient(135deg, rgb(240 20 22 / .15), rgb(30 32 42 / .6)); color: #FF4D58; --onde: rgb(240 20 22 / .35) }
 
     .gf-pop .swal2-textarea, .gf-pop .swal2-input { margin: 18px 0 0; width: 100%; box-sizing: border-box; border: 1px solid var(--line-2, rgb(255 255 255 / .12)); border-radius: 14px; font: 500 14.5px var(--f-body, "DM Sans", sans-serif); color: var(--fg, #F3F4F6); background: var(--surface, #14151D); box-shadow: 0 1px 2px rgb(0 0 0 / .3); padding: 12px 14px; transition: border-color .2s, box-shadow .2s }
     .gf-pop .swal2-textarea { min-height: 96px }
-    .gf-pop .swal2-textarea:focus, .gf-pop .swal2-input:focus { border-color: #E50914; box-shadow: 0 0 0 4px rgb(229 9 20 / .2) }
+    .gf-pop .swal2-textarea:focus, .gf-pop .swal2-input:focus { border-color: #F01416; box-shadow: 0 0 0 4px rgb(240 20 22 / .2) }
     .gf-pop .swal2-validation-message { background: var(--danger-soft, rgb(239 68 68 / .2)); color: #FCA5A5; border-radius: 12px; margin: 12px 0 0; font-weight: 600; font-size: 13px }
     .gf-pop .swal2-validation-message::before { background: var(--danger, #EF4444) }
 

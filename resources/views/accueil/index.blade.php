@@ -4,18 +4,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/png" href="{{ asset('images/favicon-32.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/icone-192.png') }}">
     <title>Accueil · {{ config('salle.nom') }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
     <style>
-        :root { --fond: #0B0C10; --texte: #F3F4F6; --muet: #9CA3AF; --ok: #15803D; --ok-fonce: #166534; --ko: #DC2626; --ko-fonce: #991B1B; --vif: #E50914; --blanc: #FFFFFF; --ligne: #2A2D3A;
+        :root { --fond: #0B0C10; --texte: #F3F4F6; --muet: #9CA3AF; --ok: #15803D; --ok-fonce: #166534; --ko: #DC2626; --ko-fonce: #991B1B; --vif: #F01416; --blanc: #FFFFFF; --ligne: #2A2D3A;
                 --d: "Sora", "Segoe UI", sans-serif; --b: "DM Sans", "Segoe UI", sans-serif; color-scheme: dark; }
         * { box-sizing: border-box }
         html, body { height: 100% }
         body { margin: 0; background: var(--fond); color: var(--texte); font-family: var(--b); display: flex; flex-direction: column; padding: 28px clamp(16px, 4vw, 48px); gap: 22px }
         header, footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
         header b { font-family: var(--d); font-size: 32px; letter-spacing: 1px; text-transform: uppercase; color: #fff }
-        #horloge { font-family: var(--d); font-size: 44px; font-weight: 600; font-variant-numeric: tabular-nums; color: #E50914 }
+        #horloge { font-family: var(--d); font-size: 44px; font-weight: 600; font-variant-numeric: tabular-nums; color: #F01416 }
+        .marque { display: flex; align-items: center; gap: 14px } .marque img { width: 52px; height: 52px }
         footer { color: var(--muet); font-size: 16px }
         main { flex: 1; display: flex; min-height: 0 }
         .ecran { flex: 1; border-radius: 28px; display: flex; align-items: center; gap: clamp(20px, 4vw, 56px); padding: clamp(24px, 4vw, 56px) clamp(20px, 5vw, 72px); flex-wrap: wrap }
@@ -40,11 +43,11 @@
     </style>
 </head>
 <body>
-<header><b>{{ config('salle.nom') }}</b><span id="horloge"></span></header>
+<header><b class="marque"><img src="{{ asset('images/picto-epikaizo.png') }}" alt="">{{ config('salle.nom') }}</b><span id="horloge"></span></header>
 
 <main>
     <section class="ecran attente" id="attente">
-        <svg width="140" height="140" viewBox="0 0 24 24" fill="none" stroke="#E50914" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3c-3 0-5.5 2.5-5.5 5.5v3M17.5 8.5v4c0 3.5-2 6.5-5.5 8.5M9 12v1.5c0 2-1 3.5-2.5 4.5M12 8.5v5c0 2.5-1 4.5-3 6M15 10v3c0 2.2-.7 4-2 5.5"/></svg>
+        <svg width="140" height="140" viewBox="0 0 24 24" fill="none" stroke="#F01416" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3c-3 0-5.5 2.5-5.5 5.5v3M17.5 8.5v4c0 3.5-2 6.5-5.5 8.5M9 12v1.5c0 2-1 3.5-2.5 4.5M12 8.5v5c0 2.5-1 4.5-3 6M15 10v3c0 2.2-.7 4-2 5.5"/></svg>
         <div class="titre">Posez votre doigt ou passez votre carte</div>
         <p>Pas d'abonnement ? Présentez-vous à la caisse · entrée journalière {{ number_format((int) config('salle.tarif_journalier'), 0, ',', ' ') }} FCFA</p>
         <p class="file" id="file" hidden></p>
