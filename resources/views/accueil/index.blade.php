@@ -8,20 +8,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
     <style>
-        :root { --fond: #0E1014; --texte: #F3F2EE; --muet: #A9ABAE; --ok: #0F9F8C; --ok-fonce: #0B7F70; --ko: #B42318; --ko-fonce: #93190F; --vif: #3DD68C; --blanc: #FFFFFF; --ligne: #2F343C;
+        :root { --fond: #0B0C10; --texte: #F3F4F6; --muet: #9CA3AF; --ok: #15803D; --ok-fonce: #166534; --ko: #DC2626; --ko-fonce: #991B1B; --vif: #E50914; --blanc: #FFFFFF; --ligne: #2A2D3A;
                 --d: "Sora", "Segoe UI", sans-serif; --b: "DM Sans", "Segoe UI", sans-serif; color-scheme: dark; }
         * { box-sizing: border-box }
         html, body { height: 100% }
         body { margin: 0; background: var(--fond); color: var(--texte); font-family: var(--b); display: flex; flex-direction: column; padding: 28px clamp(16px, 4vw, 48px); gap: 22px }
         header, footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap }
-        header b { font-family: var(--d); font-size: 32px; letter-spacing: 1px; text-transform: uppercase }
-        #horloge { font-family: var(--d); font-size: 44px; font-weight: 600; font-variant-numeric: tabular-nums }
+        header b { font-family: var(--d); font-size: 32px; letter-spacing: 1px; text-transform: uppercase; color: #fff }
+        #horloge { font-family: var(--d); font-size: 44px; font-weight: 600; font-variant-numeric: tabular-nums; color: #E50914 }
         footer { color: var(--muet); font-size: 16px }
         main { flex: 1; display: flex; min-height: 0 }
         .ecran { flex: 1; border-radius: 28px; display: flex; align-items: center; gap: clamp(20px, 4vw, 56px); padding: clamp(24px, 4vw, 56px) clamp(20px, 5vw, 72px); flex-wrap: wrap }
         .ecran[hidden] { display: none }
         .ok { background: var(--ok) } .ko { background: var(--ko) }
-        .attente { border: 2px dashed var(--ligne); flex-direction: column; justify-content: center; text-align: center }
+        .attente { border: 2px dashed var(--ligne); flex-direction: column; justify-content: center; text-align: center; background: rgb(20 22 30 / .4) }
         .visage { width: clamp(140px, 20vw, 230px); aspect-ratio: 1; border-radius: 50%; border: 6px solid var(--blanc); display: grid; place-items: center; flex-shrink: 0; overflow: hidden; font-family: var(--d); font-weight: 700; font-size: clamp(56px, 8vw, 96px) }
         .ok .visage { background: var(--ok-fonce) } .ko .visage { background: var(--ko-fonce) }
         .visage img { width: 100%; height: 100%; object-fit: cover }
@@ -44,7 +44,7 @@
 
 <main>
     <section class="ecran attente" id="attente">
-        <svg width="140" height="140" viewBox="0 0 24 24" fill="none" stroke="#3DD68C" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3c-3 0-5.5 2.5-5.5 5.5v3M17.5 8.5v4c0 3.5-2 6.5-5.5 8.5M9 12v1.5c0 2-1 3.5-2.5 4.5M12 8.5v5c0 2.5-1 4.5-3 6M15 10v3c0 2.2-.7 4-2 5.5"/></svg>
+        <svg width="140" height="140" viewBox="0 0 24 24" fill="none" stroke="#E50914" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3c-3 0-5.5 2.5-5.5 5.5v3M17.5 8.5v4c0 3.5-2 6.5-5.5 8.5M9 12v1.5c0 2-1 3.5-2.5 4.5M12 8.5v5c0 2.5-1 4.5-3 6M15 10v3c0 2.2-.7 4-2 5.5"/></svg>
         <div class="titre">Posez votre doigt ou passez votre carte</div>
         <p>Pas d'abonnement ? Présentez-vous à la caisse · entrée journalière {{ number_format((int) config('salle.tarif_journalier'), 0, ',', ' ') }} FCFA</p>
         <p class="file" id="file" hidden></p>
@@ -86,11 +86,14 @@
         if (p.client?.photo_url) { const img = new Image(); img.src = p.client.photo_url; img.alt = ''; visage.append(img); }
         else visage.textContent = p.autorise ? (p.client?.initiales || '✓') : '✕';
 
-        el('titre').textContent = p.autorise ? (p.client ? `Bienvenue, ${p.client.prenom} !` : 'Bienvenue !') : 'Accès refusé';
+        el('titre').textContent = p.sortie ? (p.client ? `À bientôt, ${p.client.prenom} !` : 'À bientôt !')
+            : p.autorise ? (p.client ? `Bienvenue, ${p.client.prenom} !` : 'Bienvenue !') : 'Accès refusé';
         el('qui').textContent = p.client ? [p.client.nom, p.formule].filter(Boolean).join(' · ') : (p.autorise ? '' : p.message);
 
         const d = el('detail'); d.replaceChildren();
-        if (p.autorise && p.jours_restants !== null && p.jours_restants !== undefined) {
+        if (p.sortie) {
+            d.className = 'reste'; d.textContent = 'Sortie enregistrée. Bonne journée !';
+        } else if (p.autorise && p.jours_restants !== null && p.jours_restants !== undefined) {
             d.className = 'reste';
             const b = document.createElement('div'); b.className = 'boite';
             const n = document.createElement('b'); n.textContent = p.jours_restants; b.append(n, p.jours_restants > 1 ? ' jours restants' : ' jour restant');

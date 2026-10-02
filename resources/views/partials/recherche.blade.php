@@ -6,14 +6,11 @@
             ['Entrée journalière', route('caisse.index').'#journalier'],
             ['Clôturer la caisse', route('caisse.cloture')],
             ['Passages du jour', route('passages.index')],
-            ['À faire', route('taches.index')],
-            ['Nouveau prospect', route('prospects.index').'#nouveau'],
         ]
         : [
             ['Nouveau client', route('clients.create')],
             ['Tableau de bord', route('dashboard')],
             ['Rapports', route('admin.rapports')],
-            ['Nouvelle campagne', route('admin.campagnes.create')],
             ['Exports Excel', route('admin.exports')],
             ['Journal des actions', route('admin.journal')],
         ];

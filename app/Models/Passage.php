@@ -31,12 +31,31 @@ class Passage extends Model
 
     protected $fillable = [
         'client_id', 'lecteur_id', 'user_id', 'paiement_id', 'salle_id',
-        'methode', 'statut', 'motif', 'empreinte_id', 'passe_le',
+        'methode', 'statut', 'motif', 'empreinte_id', 'passe_le', 'sorti_le',
     ];
 
     protected function casts(): array
     {
-        return ['passe_le' => 'datetime'];
+        return [
+            'passe_le'  => 'datetime',
+            'sorti_le'  => 'datetime',
+        ];
+    }
+
+    /** Vrai si ce passage est une sortie (le client a re-scanné après son entrée). */
+    public function estSortie(): bool
+    {
+        return $this->sorti_le !== null;
+    }
+
+    /** Durée passée dans la salle en minutes (null si pas encore sorti). */
+    public function dureeMinutes(): ?int
+    {
+        if (! $this->sorti_le) {
+            return null;
+        }
+
+        return (int) $this->passe_le->diffInMinutes($this->sorti_le);
     }
 
     public function client(): BelongsTo
@@ -82,7 +101,7 @@ class Passage extends Model
     public function message(): string
     {
         if ($this->estAutorise()) {
-            return 'Bienvenue';
+            return $this->estSortie() ? 'Bonne journée !' : 'Bienvenue';
         }
 
         return self::MOTIFS[$this->motif] ?? 'Accès refusé';

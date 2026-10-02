@@ -100,7 +100,7 @@ class PassageController extends Controller
             || (string) $passage->empreinte_id === $q;
     }
 
-    /** Une ligne par client : heure d'arrivée, nombre de passages et de refus. */
+    /** Une ligne par client : heure d'arrivée, heure de sortie, nombre de passages et de refus. */
     private function regrouperParClient(Collection $passages): Collection
     {
         return $passages->reverse()
@@ -108,8 +108,10 @@ class PassageController extends Controller
             ->map(fn (Collection $groupe) => [
                 'passage' => $groupe->last(),
                 'arrivee' => $groupe->first()->passe_le,
+                'sortie'  => $groupe->filter->estAutorise()->sortBy('passe_le')->last()?->sorti_le,
+                'duree'   => $groupe->filter->estAutorise()->sortBy('passe_le')->last()?->dureeMinutes(),
                 'entrees' => $groupe->filter->estAutorise()->count(),
-                'refus' => $groupe->reject->estAutorise()->count(),
+                'refus'   => $groupe->reject->estAutorise()->count(),
             ])
             ->sortBy('arrivee')
             ->values();

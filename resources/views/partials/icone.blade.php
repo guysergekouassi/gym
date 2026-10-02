@@ -14,6 +14,8 @@
     @case('ecran')<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>@break
     @case('message')<path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20.5l1.7-5.2A8.5 8.5 0 1 1 21 11.5z"/>@break
     @case('haltere')<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>@break
+    @case('biceps')
+    @case('epikaizo')<circle cx="10" cy="5" r="2.5"/><path d="M4 17.5c1.5-4.5 4.5-7 8.5-7 1.8 0 3 .6 4 1.8l1.5-2.2c.6-.9 1.6-1.1 2.5-.6.8.5 1 1.5.7 2.3l-.7 2.2c1.3.8 2 2.2 1.5 3.7-.5 1.6-2 2.8-3.8 2.8h-1.2c-.8 2-2.5 3.5-4.8 3.8-3 .4-6.2-.8-8.2-3.8z"/>@break
     @case('loupe')<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>@break
     @case('liste')<path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>@break
     @case('prospect')<circle cx="10" cy="8" r="3.5"/><path d="M3.5 20c.8-3.5 3.4-5.5 6.5-5.5 1.3 0 2.5.3 3.5 1M18 14v6M15 17h6"/>@break

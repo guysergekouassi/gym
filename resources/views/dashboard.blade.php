@@ -54,12 +54,9 @@
     </form>
 </div>
 
-@if($messagesEnAttente || $alertesStock->isNotEmpty() || $prospectsOuverts)
+@if($prevu['prevu'] !== null)
     <section class="actions" aria-label="À traiter">
-        @if($messagesEnAttente)<a href="{{ route('taches.index') }}" class="tag warn" style="font-size:13px;padding:8px 12px">@include('partials.icone', ['nom' => 'whatsapp', 'taille' => 14]) {{ $messagesEnAttente }} message(s) à envoyer</a>@endif
-        @if($prospectsOuverts)<a href="{{ route('prospects.index') }}" class="tag info" style="font-size:13px;padding:8px 12px">{{ $prospectsOuverts }} prospect(s) à suivre</a>@endif
-        @foreach($alertesStock as $p)<a href="{{ route('admin.produits.index') }}" class="tag ko" style="font-size:13px;padding:8px 12px">Stock bas : {{ $p->nom }} ({{ $p->stock }})</a>@endforeach
-        @if($prevu['prevu'] !== null)<span class="tag ok" style="font-size:13px;padding:8px 12px">Recette attendue sur 30 j : {{ Fcfa::format($prevu['prevu']) }}</span>@endif
+        <span class="tag ok" style="font-size:13px;padding:8px 12px">Recette attendue sur 30 j : {{ Fcfa::format($prevu['prevu']) }}</span>
     </section>
 @endif
 

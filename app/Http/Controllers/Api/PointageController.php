@@ -43,24 +43,27 @@ class PointageController extends Controller
         $finDroits = $client?->finDesDroits();
 
         return response()->json([
-            'autorise' => $passage->estAutorise(),
+            'autorise'     => $passage->estAutorise(),
             'ouvrir_porte' => $passage->estAutorise(),
-            'motif' => $passage->motif,
-            'message' => $passage->message(),
-            'passage_id' => $passage->id,
+            'est_sortie'   => $passage->estSortie(),
+            'motif'        => $passage->motif,
+            'message'      => $passage->message(),
+            'passage_id'   => $passage->id,
             'client' => $client ? [
-                'id' => $client->id,
-                'nom' => $client->nom_complet,
-                'type' => Client::TYPES[$client->type] ?? $client->type,
+                'id'       => $client->id,
+                'nom'      => $client->nom_complet,
+                'type'     => Client::TYPES[$client->type] ?? $client->type,
                 'photo_url' => $client->photo_url,
             ] : null,
             'abonnement' => $abonnement ? [
-                'formule' => $abonnement->formule->nom,
-                'fin_droits' => ($finDroits ?? $abonnement->date_fin)->format('Y-m-d'),
-                'jours_restants' => max(0, (int) today()->diffInDays($finDroits ?? $abonnement->date_fin, false)),
+                'formule'          => $abonnement->formule->nom,
+                'fin_droits'       => ($finDroits ?? $abonnement->date_fin)->format('Y-m-d'),
+                'jours_restants'   => max(0, (int) today()->diffInDays($finDroits ?? $abonnement->date_fin, false)),
                 'entrees_restantes' => $abonnement->entrees_restantes,
             ] : null,
             'porte_pilotee' => $porte->estActive(),
+            'sorti_le'     => $passage->sorti_le?->format('H:i'),
+            'passe_le'     => $passage->passe_le->format('H:i'),
         ]);
     }
 }

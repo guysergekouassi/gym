@@ -147,12 +147,32 @@ class FonctionnalitesTest extends TestCase
         $this->assertSame(Client::TYPE_ABONNE, $client->fresh()->type);
 
         $this->scanner('21')->assertJson(['autorise' => true, 'abonnement' => ['entrees_restantes' => 1]]);
-        $this->travel(3)->minutes();
+        $this->travel(1)->days();
         $this->scanner('21')->assertJson(['autorise' => true]);
-        $this->travel(3)->minutes();
+        $this->travel(1)->days();
         $this->scanner('21')->assertJson(['autorise' => false, 'motif' => 'carnet_epuise']);
         $this->assertSame(0, $client->abonnements()->first()->entrees_restantes);
         $this->assertNotNull($formule);
+    }
+
+    public function test_second_scan_dun_abonne_enregistre_sa_sortie(): void
+    {
+        Formule::create(['nom' => 'Carnet 2', 'type' => Formule::TYPE_CARNET, 'duree_jours' => 30, 'nb_entrees' => 2, 'prix' => 4000, 'actif' => true]);
+        $client = Client::create(['type' => Client::TYPE_JOURNALIER, 'nom' => 'Koné', 'empreinte_id' => '22']);
+        $this->abonner($client, 'Carnet 2');
+
+        $this->scanner('22')->assertJson(['autorise' => true, 'est_sortie' => false]);
+        $this->travel(3)->minutes();
+        $this->scanner('22')->assertJson(['autorise' => true, 'est_sortie' => false]);
+        $this->travel(5)->minutes();
+        $this->scanner('22')->assertJson(['autorise' => true, 'est_sortie' => true, 'message' => 'Bonne journée !']);
+        $this->travel(1)->minutes();
+        $this->scanner('22')->assertJson(['est_sortie' => true]);
+
+        // Une seule entrée décomptée, un seul passage
+        $this->assertSame(1, $client->abonnements()->first()->entrees_restantes);
+        $this->assertSame(1, Passage::count());
+        $this->assertSame(8, Passage::firstOrFail()->dureeMinutes());
     }
 
     public function test_code_promo_et_frais_dinscription(): void
@@ -196,13 +216,13 @@ class FonctionnalitesTest extends TestCase
         $this->abonner($client);
 
         $this->withToken($this->token)->postJson('/api/pointage/carte', ['carte' => '0012774155'])->assertJson(['autorise' => true, 'ouvrir_porte' => true]);
-        $this->travel(3)->minutes();
+        $this->travel(1)->days();
         $this->withToken($this->token)->postJson('/api/pointage/carte', ['carte' => strtolower($client->code_acces)])->assertJson(['autorise' => true]);
         $this->withToken($this->token)->postJson('/api/pointage/carte', ['carte' => 'INCONNU99'])->assertJson(['autorise' => false, 'motif' => 'carte_inconnue']);
         $this->assertSame(2, Passage::where('methode', Passage::METHODE_CARTE)->where('statut', 'autorise')->count());
 
         // Lecteur USB branché sur l'écran d'accueil
-        $this->travel(3)->minutes();
+        $this->travel(1)->days();
         $this->actingAs($this->caissiere)->postJson('/accueil/badge', ['carte' => '0012774155'])->assertOk()->assertJson(['autorise' => true, 'client' => ['prenom' => 'Ouattara']]);
     }
 

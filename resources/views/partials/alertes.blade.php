@@ -21,21 +21,21 @@
     .gf-entree { animation: gf-entree .38s cubic-bezier(.2, .8, .2, 1) both }
     .gf-sortie { animation: gf-sortie .18s ease-in both }
 
-    .swal2-popup.gf-pop { border-radius: 26px; padding: 32px 28px 26px; width: min(440px, calc(100vw - 32px)); color: var(--fg, #0F172A); background: var(--surface, #fff); box-shadow: 0 40px 100px -30px rgb(11 18 32 / .55), 0 0 0 1px rgb(15 23 42 / .05) }
-    .gf-pop .swal2-title { font-family: var(--f-display, "DM Sans", sans-serif); font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; padding: 0; color: var(--fg, #0F172A) }
-    .gf-pop .swal2-html-container { font-size: 14.5px; line-height: 1.6; color: var(--muted, #5B6678); margin: 10px 0 0; padding: 0 }
-    .gf-pop .swal2-html-container ul { text-align: left; margin: 12px 0 0; padding: 12px 14px 12px 32px; color: var(--fg, #0F172A); background: var(--surface-2, #F7F9FC); border-radius: 14px; border: 1px solid var(--line, #E6EAF0) }
+    .swal2-popup.gf-pop { border-radius: 26px; padding: 32px 28px 26px; width: min(440px, calc(100vw - 32px)); color: var(--fg, #F3F4F6); background: var(--surface, #14151D); box-shadow: 0 40px 100px -30px rgb(0 0 0 / .9), 0 0 0 1px rgb(255 255 255 / .08) }
+    .gf-pop .swal2-title { font-family: var(--f-display, "DM Sans", sans-serif); font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; padding: 0; color: var(--fg, #F3F4F6) }
+    .gf-pop .swal2-html-container { font-size: 14.5px; line-height: 1.6; color: var(--muted, #9CA3AF); margin: 10px 0 0; padding: 0 }
+    .gf-pop .swal2-html-container ul { text-align: left; margin: 12px 0 0; padding: 12px 14px 12px 32px; color: var(--fg, #F3F4F6); background: var(--surface-2, #1B1D26); border-radius: 14px; border: 1px solid var(--line, rgb(255 255 255 / .08)) }
     .gf-pop .swal2-html-container li + li { margin-top: 6px }
     .gf-pop .swal2-actions { gap: 10px; margin-top: 24px; width: 100%; flex-wrap: nowrap }
     .gf-pop .swal2-actions button { flex: 1; min-height: 48px; border-radius: 14px; font: 700 14.5px var(--f-body, "DM Sans", sans-serif); border: 0; cursor: pointer; margin: 0; transition: transform .15s cubic-bezier(.2, .8, .2, 1), box-shadow .2s, filter .2s }
     .gf-pop .swal2-actions button:hover { transform: translateY(-1px); filter: brightness(1.05) }
     .gf-pop .swal2-actions button:active { transform: scale(.98) }
-    .gf-ok { background: linear-gradient(135deg, #22C1A5, #0F9F8C); color: #fff; box-shadow: 0 12px 24px -12px rgb(15 159 140 / .8) }
-    .gf-danger { background: linear-gradient(135deg, #EF4444, #C81E1E); color: #fff; box-shadow: 0 12px 24px -12px rgb(200 30 30 / .8) }
-    .gf-annuler { background: var(--surface, #fff); color: var(--fg, #0F172A); border: 1px solid var(--line-2, #D3DAE4) !important }
-    .gf-annuler:hover { background: var(--surface-2, #F7F9FC) !important }
-    .gf-pop .swal2-actions button:focus-visible { outline: 3px solid rgb(37 99 235 / .45); outline-offset: 2px }
-    .gf-pop .swal2-loader { border-color: #22C1A5 transparent #6D5DFB transparent }
+    .gf-ok { background: linear-gradient(135deg, #FF2E3B, #E50914); color: #fff; box-shadow: 0 12px 24px -12px rgb(229 9 20 / .8) }
+    .gf-danger { background: linear-gradient(135deg, #EF4444, #B91C1C); color: #fff; box-shadow: 0 12px 24px -12px rgb(229 9 20 / .8) }
+    .gf-annuler { background: var(--surface-2, #1B1D26); color: var(--fg, #F3F4F6); border: 1px solid var(--line-2, rgb(255 255 255 / .12)) !important }
+    .gf-annuler:hover { background: #242734 !important }
+    .gf-pop .swal2-actions button:focus-visible { outline: 3px solid rgb(229 9 20 / .45); outline-offset: 2px }
+    .gf-pop .swal2-loader { border-color: #FF2E3B transparent #B91C1C transparent }
 
     /* Icônes : pastille colorée animée à la place des icônes par défaut */
     .gf-pop .swal2-icon.gf-icone { border: 0 !important; width: 72px; height: 72px; margin: 0 auto 18px; display: grid !important; place-items: center; border-radius: 22px; animation: gf-pastille .45s cubic-bezier(.2, .8, .2, 1) both, gf-onde 1.2s .35s ease-out }
@@ -43,21 +43,21 @@
     .gf-icone svg { width: 34px; height: 34px }
     /* Spécificité renforcée : les couleurs par défaut de SweetAlert (.swal2-icon.swal2-warning…) ne doivent pas l'emporter */
     .swal2-icon.gf-icone.gf-i-succes, .swal2-icon.gf-icone.gf-i-erreur, .swal2-icon.gf-icone.gf-i-alerte, .swal2-icon.gf-icone.gf-i-question, .swal2-icon.gf-icone.gf-i-attente { color: var(--gf-i) !important }
-    .gf-i-succes { --gf-i: #0B7F70; background: linear-gradient(135deg, #C9F2E4, #E4DEFD); color: #0B7F70; --onde: rgb(16 185 129 / .35) }
-    .gf-i-erreur { --gf-i: #C81E1E; background: linear-gradient(135deg, #FEE2E2, #FECACA); color: #C81E1E; --onde: rgb(239 68 68 / .35) }
-    .gf-i-alerte { --gf-i: #B45309; background: linear-gradient(135deg, #FEF3C7, #FDE68A); color: #B45309; --onde: rgb(245 158 11 / .35) }
-    .gf-i-question { --gf-i: #4338CA; background: linear-gradient(135deg, #EEEBFF, #E4DEFD); color: #4338CA; --onde: rgb(37 99 235 / .3) }
-    .gf-i-attente { --gf-i: #047857; background: linear-gradient(135deg, #D1FAE5, #DBEAFE); color: #047857; --onde: rgb(16 185 129 / .35) }
+    .gf-i-succes { --gf-i: #FF2E3B; background: linear-gradient(135deg, rgb(229 9 20 / .2), rgb(35 38 50 / .6)); color: #FF2E3B; --onde: rgb(229 9 20 / .35) }
+    .gf-i-erreur { --gf-i: #EF4444; background: linear-gradient(135deg, rgb(239 68 68 / .2), rgb(45 20 22 / .6)); color: #EF4444; --onde: rgb(239 68 68 / .35) }
+    .gf-i-alerte { --gf-i: #F59E0B; background: linear-gradient(135deg, rgb(245 158 11 / .2), rgb(45 35 20 / .6)); color: #F59E0B; --onde: rgb(245 158 11 / .35) }
+    .gf-i-question { --gf-i: #E50914; background: linear-gradient(135deg, rgb(229 9 20 / .2), rgb(35 38 50 / .6)); color: #E50914; --onde: rgb(229 9 20 / .3) }
+    .gf-i-attente { --gf-i: #FF4D58; background: linear-gradient(135deg, rgb(229 9 20 / .15), rgb(30 32 42 / .6)); color: #FF4D58; --onde: rgb(229 9 20 / .35) }
 
-    .gf-pop .swal2-textarea, .gf-pop .swal2-input { margin: 18px 0 0; width: 100%; box-sizing: border-box; border: 1px solid var(--line-2, #D3DAE4); border-radius: 14px; font: 500 14.5px var(--f-body, "DM Sans", sans-serif); color: var(--fg, #0F172A); background: var(--surface, #fff); box-shadow: 0 1px 2px rgb(15 23 42 / .04); padding: 12px 14px; transition: border-color .2s, box-shadow .2s }
+    .gf-pop .swal2-textarea, .gf-pop .swal2-input { margin: 18px 0 0; width: 100%; box-sizing: border-box; border: 1px solid var(--line-2, rgb(255 255 255 / .12)); border-radius: 14px; font: 500 14.5px var(--f-body, "DM Sans", sans-serif); color: var(--fg, #F3F4F6); background: var(--surface, #14151D); box-shadow: 0 1px 2px rgb(0 0 0 / .3); padding: 12px 14px; transition: border-color .2s, box-shadow .2s }
     .gf-pop .swal2-textarea { min-height: 96px }
-    .gf-pop .swal2-textarea:focus, .gf-pop .swal2-input:focus { border-color: #22C1A5; box-shadow: 0 0 0 4px rgb(34 193 165 / .16) }
-    .gf-pop .swal2-validation-message { background: var(--danger-soft, #FDECEC); color: var(--danger, #C81E1E); border-radius: 12px; margin: 12px 0 0; font-weight: 600; font-size: 13px }
-    .gf-pop .swal2-validation-message::before { background: var(--danger, #C81E1E) }
+    .gf-pop .swal2-textarea:focus, .gf-pop .swal2-input:focus { border-color: #E50914; box-shadow: 0 0 0 4px rgb(229 9 20 / .2) }
+    .gf-pop .swal2-validation-message { background: var(--danger-soft, rgb(239 68 68 / .2)); color: #FCA5A5; border-radius: 12px; margin: 12px 0 0; font-weight: 600; font-size: 13px }
+    .gf-pop .swal2-validation-message::before { background: var(--danger, #EF4444) }
 
     /* Notifications */
-    .swal2-popup.gf-toast { border-radius: 16px; padding: 12px 16px 12px 12px; width: auto; max-width: min(420px, calc(100vw - 32px)); background: rgb(255 255 255 / .92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 20px 50px -18px rgb(11 18 32 / .4), 0 0 0 1px rgb(15 23 42 / .06); color: var(--fg, #0F172A) }
-    .gf-toast .swal2-title { font: 600 14px var(--f-body, "DM Sans", sans-serif); color: var(--fg, #0F172A); margin: 0 0 0 10px; line-height: 1.4 }
+    .swal2-popup.gf-toast { border-radius: 16px; padding: 12px 16px 12px 12px; width: auto; max-width: min(420px, calc(100vw - 32px)); background: rgb(20 22 30 / .95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 20px 50px -18px rgb(0 0 0 / .7), 0 0 0 1px rgb(255 255 255 / .1); color: var(--fg, #F3F4F6) }
+    .gf-toast .swal2-title { font: 600 14px var(--f-body, "DM Sans", sans-serif); color: var(--fg, #F3F4F6); margin: 0 0 0 10px; line-height: 1.4 }
     .gf-toast .swal2-icon.gf-icone { width: 36px; height: 36px; min-width: 36px; margin: 0; border: 0 !important; border-radius: 11px; display: grid !important; place-items: center; animation: gf-pastille .4s cubic-bezier(.2, .8, .2, 1) both }
     .gf-toast .swal2-icon.gf-icone .swal2-icon-content { font-size: 0; display: grid }
     .gf-toast .gf-icone svg { width: 20px; height: 20px }

@@ -19,7 +19,11 @@ class AccueilController extends Controller
 
     public function dernier(): JsonResponse
     {
-        $passage = Passage::with('client')->latest('passe_le')->latest('id')->first();
+        $entree = Passage::with('client')->latest('passe_le')->latest('id')->first();
+        $sortie = Passage::with('client')->whereNotNull('sorti_le')->latest('sorti_le')->first();
+
+        // Le dernier évènement peut être une sortie (passage existant mis à jour)
+        $passage = $sortie && $entree && $sortie->sorti_le->gt($entree->passe_le) ? $sortie : $entree;
 
         return response()->json($passage ? $this->presenter($passage) : null);
     }
@@ -40,12 +44,13 @@ class AccueilController extends Controller
         $carnet = $client?->abonnementActif();
 
         return [
-            'id' => $passage->id,
+            'id' => $passage->id.($passage->estSortie() ? '-sortie' : ''),
             'autorise' => $passage->estAutorise(),
+            'sortie' => $passage->estSortie(),
             'message' => $passage->message(),
             'methode' => $passage->methode,
             'heure' => $passage->passe_le->format('H:i'),
-            'il_y_a_secondes' => (int) abs(now()->diffInSeconds($passage->passe_le)),
+            'il_y_a_secondes' => (int) abs(now()->diffInSeconds($passage->sorti_le ?? $passage->passe_le)),
             'client' => $client ? [
                 'nom' => $client->nom_complet,
                 'prenom' => $client->appel,

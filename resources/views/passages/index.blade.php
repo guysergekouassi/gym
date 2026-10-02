@@ -70,11 +70,21 @@
 <div class="table-wrap">
     <table>
         @if($vue === 'passage')
-            <thead><tr><th>Heure</th><th>Client</th><th>Droits</th><th>Pointage</th><th>Résultat</th><th>Venues · 7 j</th><th><span class="sr">Actions</span></th></tr></thead>
+            <thead><tr><th>Entrée</th><th>Sortie</th><th>Client</th><th>Droits</th><th>Pointage</th><th>Résultat</th><th>Venues · 7 j</th><th><span class="sr">Actions</span></th></tr></thead>
             <tbody>
             @forelse($passages as $p)
                 <tr class="{{ $p->estAutorise() ? '' : 'refused' }}">
                     <td class="time">{{ $p->passe_le->format('H:i') }}</td>
+                    <td class="time">
+                        @if($p->sorti_le)
+                            {{ $p->sorti_le->format('H:i') }}
+                            @if($p->dureeMinutes() !== null)
+                                <span class="muted" style="font-size:11px">({{ $p->dureeMinutes() }} min)</span>
+                            @endif
+                        @else
+                            <span class="muted">—</span>
+                        @endif
+                    </td>
                     <td>
                         <div class="who">
                             <div class="av {{ $p->estAutorise() ? '' : 'ko' }}">@if($p->client?->photo_url)<img src="{{ $p->client->photo_url }}" alt="">@else{{ $initiales($p->client) }}@endif</div>
@@ -123,7 +133,7 @@
             @endforelse
             </tbody>
         @else
-            <thead><tr><th>Client</th><th>Droits</th><th>Arrivée</th><th>Entrées ce jour</th><th>Venues · 7 j</th><th>Statut</th></tr></thead>
+            <thead><tr><th>Client</th><th>Droits</th><th>Arrivée</th><th>Sortie</th><th>Entrées ce jour</th><th>Venues · 7 j</th><th>Statut</th></tr></thead>
             <tbody>
             @forelse($parClient as $ligne)
                 @php($p = $ligne['passage'])
@@ -140,6 +150,16 @@
                     </td>
                     <td>{{ $droits($p) }}</td>
                     <td class="time">{{ $ligne['arrivee']->format('H:i') }}</td>
+                    <td class="time">
+                        @if($ligne['sortie'])
+                            {{ $ligne['sortie']->format('H:i') }}
+                            @if($ligne['duree'] !== null)
+                                <span class="muted" style="font-size:11px">({{ $ligne['duree'] }} min)</span>
+                            @endif
+                        @else
+                            <span class="muted">—</span>
+                        @endif
+                    </td>
                     <td><strong class="num" style="font-size:18px">{{ $ligne['entrees'] }}</strong>@if($ligne['refus']) <span class="meta ko">· {{ $ligne['refus'] }} refus</span>@endif</td>
                     <td>
                         @if($p->client_id && isset($venues7j[$p->client_id]))
@@ -159,7 +179,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="muted">Aucun client{{ $q !== '' || $filtre !== 'tous' ? ' ne correspond à cette recherche' : ' ce jour-là' }}.</td></tr>
+                <tr><td colspan="7" class="muted">Aucun client{{ $q !== '' || $filtre !== 'tous' ? ' ne correspond à cette recherche' : ' ce jour-là' }}.</td></tr>
             @endforelse
             </tbody>
         @endif

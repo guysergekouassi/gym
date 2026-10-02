@@ -49,19 +49,21 @@ class PointageService
 
         if (! $client) {
             return $this->enregistrer([
-                'lecteur_id' => $lecteur?->id,
-                'salle_id' => $salleId,
-                'methode' => $methode,
-                'statut' => Passage::STATUT_REFUSE,
-                'motif' => $motifInconnu,
+                'lecteur_id'   => $lecteur?->id,
+                'salle_id'     => $salleId,
+                'methode'      => $methode,
+                'statut'       => Passage::STATUT_REFUSE,
+                'motif'        => $motifInconnu,
                 'empreinte_id' => $identifiant,
             ]);
         }
 
-        // Anti-doublon : un client qui repose le doigt ou repasse sa carte ne crée qu'un passage
+        // --- Anti-doublon : scan répété trop vite (selon config) → ignorer ---
+        $antiDoublonSecondes = (int) config('salle.anti_doublon_secondes', 300);
         $recent = Passage::where('client_id', $client->id)
             ->where('statut', Passage::STATUT_AUTORISE)
-            ->where('passe_le', '>=', now()->subSeconds((int) config('salle.anti_doublon_secondes')))
+            ->where('passe_le', '>=', now()->subSeconds($antiDoublonSecondes))
+            ->whereNull('sorti_le')
             ->latest('passe_le')
             ->first();
 
@@ -69,16 +71,48 @@ class PointageService
             return $recent;
         }
 
+        // --- Sortie d'un abonné : re-scan au moins 5 min après une entrée ouverte du jour ---
+        // Avant 5 min, c'est un doublon. Sortir n'exige aucun droit (et ne décompte pas d'entrée de carnet).
+        if ($client->type === Client::TYPE_ABONNE) {
+            $sortieRecente = Passage::where('client_id', $client->id)
+                ->where('sorti_le', '>=', now()->subSeconds($antiDoublonSecondes))
+                ->latest('sorti_le')
+                ->first();
+
+            if ($sortieRecente) {
+                return $sortieRecente;
+            }
+
+            $entreeOuverte = Passage::where('client_id', $client->id)
+                ->where('statut', Passage::STATUT_AUTORISE)
+                ->whereDate('passe_le', today()->toDateString())
+                ->whereNull('sorti_le')
+                ->latest('passe_le')
+                ->first();
+
+            if ($entreeOuverte && $entreeOuverte->passe_le->gt(now()->subMinutes(5))) {
+                return $entreeOuverte;
+            }
+
+            if ($entreeOuverte) {
+                $entreeOuverte->update(['sorti_le' => now()]);
+                $this->porte->ouvrir($entreeOuverte);
+
+                return $entreeOuverte;
+            }
+        }
+
+        // --- Nouveau passage (entrée) ---
         $passage = DB::transaction(function () use ($client, $methode, $identifiant, $lecteur, $salleId) {
             [$autorise, $motif] = $this->verifierDroit($client);
 
             return $this->enregistrer([
-                'client_id' => $client->id,
-                'lecteur_id' => $lecteur?->id,
-                'salle_id' => $salleId,
-                'methode' => $methode,
-                'statut' => $autorise ? Passage::STATUT_AUTORISE : Passage::STATUT_REFUSE,
-                'motif' => $motif,
+                'client_id'    => $client->id,
+                'lecteur_id'   => $lecteur?->id,
+                'salle_id'     => $salleId,
+                'methode'      => $methode,
+                'statut'       => $autorise ? Passage::STATUT_AUTORISE : Passage::STATUT_REFUSE,
+                'motif'        => $motif,
                 'empreinte_id' => $identifiant,
             ]);
         });

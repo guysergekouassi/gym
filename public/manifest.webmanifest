@@ -1,12 +1,12 @@
 {
-    "name": "GymFlow · Mon espace",
-    "short_name": "GymFlow",
+    "name": "Gymnase EPIKAÏZO · Mon espace",
+    "short_name": "EPIKAÏZO",
     "description": "Jours restants, QR code d'accès et réservation des cours.",
     "start_url": "/membre",
     "scope": "/membre",
     "display": "standalone",
-    "background_color": "#F6F7FB",
-    "theme_color": "#0F9F8C",
+    "background_color": "#0B0C10",
+    "theme_color": "#E50914",
     "lang": "fr",
     "icons": [
         { "src": "/icone-membre.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
