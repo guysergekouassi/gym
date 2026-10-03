@@ -40,9 +40,12 @@
                                         <form method="POST" action="{{ route('admin.pointeuses.tester', $p) }}">@csrf<button type="submit" class="btn-primary btn-sm">Tester</button></form>
                                         <form method="POST" action="{{ route('admin.pointeuses.synchroniser', $p) }}">@csrf<button type="submit" class="btn-light btn-sm">Envoyer les membres</button></form>
                                         <a href="{{ route('admin.pointeuses.index', ['modifier' => $p->id]) }}" class="btn-light btn-sm">Modifier</a>
-                                        <form method="POST" action="{{ route('admin.pointeuses.destroy', $p) }}" data-confirm="Désactiver « {{ $p->nom }} » ?">@csrf @method('DELETE')<button type="submit" class="btn-danger btn-sm">Désactiver</button></form>
+                                        <form method="POST" action="{{ route('admin.pointeuses.destroy', $p) }}" data-confirm="Désactiver « {{ $p->nom }} » ?">@csrf @method('DELETE')<button type="submit" class="btn-light btn-sm">Désactiver</button></form>
                                     </div>
                                 @endif
+                                <form method="POST" action="{{ route('admin.pointeuses.supprimer', $p) }}" class="mt-1.5 text-right" data-confirm="Supprimer définitivement « {{ $p->nom }} » ? Les passages déjà enregistrés sont conservés.">@csrf @method('DELETE')
+                                    <button type="submit" class="btn-danger btn-sm">Supprimer</button>
+                                </form>
                             </td>
                         </tr>
                     @empty

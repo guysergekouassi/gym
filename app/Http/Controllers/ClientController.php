@@ -12,6 +12,7 @@ use App\Support\Recherche;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -25,7 +26,7 @@ class ClientController extends Controller
         $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
             'type' => ['nullable', Rule::in(array_keys(Client::TYPES))],
-            'statut' => ['nullable', Rule::in(['en_regle', 'expire', 'expire_bientot', 'a_relancer'])],
+            'statut' => ['nullable', Rule::in(['en_regle', 'expire', 'expire_bientot', 'a_relancer', 'masques'])],
         ]);
 
         $jour = today()->toDateString();
@@ -40,7 +41,10 @@ class ClientController extends Controller
             ->limit(1)
             ->select('formules.nom');
 
+        $masques = $request->query('statut') === 'masques' && $request->user()->isAdmin();
+
         $clients = Client::query()
+            ->when($masques, fn ($q) => $q->onlyTrashed())
             ->select('clients.*')
             ->addSelect(['formule_actuelle' => $formuleActuelle])
             ->when($request->filled('q'), fn ($query) => Recherche::appliquer(
@@ -69,6 +73,8 @@ class ClientController extends Controller
                 Client::TYPE_JOURNALIER => Client::journaliers()->count(),
             ],
             'numeroSuggere' => Empreinte::prochainNumero(),
+            'masques' => $masques,
+            'nombreMasques' => $request->user()->isAdmin() ? Client::onlyTrashed()->count() : 0,
         ]);
     }
 
@@ -156,7 +162,43 @@ class ClientController extends Controller
         $client->forceFill(['empreinte_id' => null])->save();
         $client->delete();
 
-        return redirect()->route('clients.index')->with('succes', 'Client archivé, son empreinte est retirée de la pointeuse.');
+        return redirect()->route('clients.index')->with('succes', "{$client->nom_complet} est masqué(e) : retiré(e) de la liste et de la pointeuse. Vous pouvez le réafficher depuis « Statut : masqués ».");
+    }
+
+    /** Réafficher un client masqué (son n° de pointeuse est à réattribuer). */
+    public function restaurer(int $id): RedirectResponse
+    {
+        $client = Client::onlyTrashed()->findOrFail($id);
+        $client->restore();
+
+        return redirect()->route('clients.show', $client)
+            ->with('succes', "{$client->nom_complet} est de nouveau visible. Attribuez-lui un n° de pointeuse si besoin (Modifier).");
+    }
+
+    /**
+     * Suppression définitive : seulement pour une fiche sans aucun paiement
+     * (doublon, erreur de saisie). Un client qui a payé reste dans l'historique de caisse : on le masque.
+     */
+    public function supprimerDefinitivement(int $id): RedirectResponse
+    {
+        $client = Client::withTrashed()->findOrFail($id);
+
+        if ($client->paiements()->exists()) {
+            return back()->with('erreur', "{$client->nom_complet} a des paiements enregistrés : on ne peut pas l'effacer sans fausser la caisse. Masquez-le à la place.");
+        }
+
+        if ($client->empreinte_id) {
+            $this->pointeuse->retirer($client->empreinte_id);
+        }
+        if ($client->photo_path) {
+            Storage::disk('public')->delete($client->photo_path);
+        }
+
+        $nom = $client->nom_complet;
+        $client->forceDelete();
+        Log::notice('Client supprimé définitivement', ['client' => $id, 'par' => auth()->id()]);
+
+        return redirect()->route('clients.index')->with('succes', "{$nom} a été supprimé(e) définitivement.");
     }
 
     private function stockerPhoto(UploadedFile $photo): string

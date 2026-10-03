@@ -34,6 +34,8 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::delete('/clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
+        Route::post('/clients/{id}/restaurer', [ClientController::class, 'restaurer'])->whereNumber('id')->name('clients.restaurer');
+        Route::delete('/clients/{id}/definitif', [ClientController::class, 'supprimerDefinitivement'])->whereNumber('id')->name('clients.supprimer');
 
         Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/paiements', [PaiementController::class, 'index'])->name('paiements.index');
@@ -59,6 +61,9 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
             Route::post('/pointeuses/{lecteur}/tester', [PointeuseController::class, 'tester'])->middleware('throttle:20,1')->name('pointeuses.tester');
             Route::post('/pointeuses/{lecteur}/synchroniser', [PointeuseController::class, 'synchroniser'])->name('pointeuses.synchroniser');
             Route::delete('/pointeuses/{lecteur}', [PointeuseController::class, 'destroy'])->name('pointeuses.destroy');
+            Route::delete('/pointeuses/{lecteur}/definitif', [PointeuseController::class, 'supprimer'])->name('pointeuses.supprimer');
+            Route::delete('/formules/{formule}', [FormuleController::class, 'destroy'])->name('formules.destroy');
+            Route::delete('/utilisateurs/{utilisateur}/definitif', [UtilisateurController::class, 'supprimer'])->name('utilisateurs.supprimer');
         });
     });
 
