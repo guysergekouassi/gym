@@ -6,8 +6,11 @@ use App\Models\Abonnement;
 use App\Models\Client;
 use App\Models\Formule;
 use App\Models\Paiement;
+use App\Models\Parametre;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class CaisseService
 {
@@ -15,8 +18,9 @@ class CaisseService
 
     /**
      * Encaisse une entrée journalière, enregistre le passage et numérote le reçu.
+     * Le montant est toujours le tarif fixé par l'admin : la caissière ne le saisit pas.
      *
-     * @param  array{client_id?: ?int, nom?: ?string, telephone?: ?string, montant: int, mode: string, reference?: ?string}  $data
+     * @param  array{client_id?: ?int, nom?: ?string, telephone?: ?string, mode: string, reference?: ?string}  $data
      */
     public function encaisserJournalier(array $data, User $caissier): Paiement
     {
@@ -27,7 +31,7 @@ class CaisseService
                 'client_id' => $client?->id,
                 'user_id' => $caissier->id,
                 'type' => Paiement::TYPE_JOURNALIER,
-                'montant' => $data['montant'],
+                'montant' => Parametre::tarifJournalier(),
                 'mode' => $data['mode'],
                 'reference' => $data['reference'] ?? null,
             ]);
@@ -79,6 +83,35 @@ class CaisseService
 
             return $paiement;
         });
+    }
+
+    /**
+     * Annule un encaissement (erreur de caisse). Rien n'est supprimé : le paiement
+     * reste visible, barré, avec l'auteur, la date et le motif de l'annulation.
+     */
+    public function annuler(Paiement $paiement, User $admin, string $motif): void
+    {
+        DB::transaction(function () use ($paiement, $admin, $motif) {
+            $paiement = Paiement::lockForUpdate()->findOrFail($paiement->id);
+
+            if ($paiement->estAnnule()) {
+                throw new RuntimeException('Ce paiement est déjà annulé.');
+            }
+
+            $paiement->forceFill([
+                'annule_le' => now(),
+                'annule_par' => $admin->id,
+                'motif_annulation' => $motif,
+            ])->save();
+
+            $paiement->abonnement?->update(['statut' => Abonnement::STATUT_ANNULE]);
+        });
+
+        Log::notice('Paiement annulé', [
+            'recu' => $paiement->numero_recu,
+            'montant' => $paiement->montant,
+            'par' => $admin->id,
+        ]);
     }
 
     /** Client identifié si possible ; sinon passage anonyme (client null). */
