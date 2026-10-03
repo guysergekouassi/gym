@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Paiement;
 use App\Models\User;
 use App\Services\CaisseService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Support\Exercices;
 use App\Support\Periode;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** Journal des encaissements : contrôle de caisse, export, annulation. */
@@ -75,6 +77,37 @@ class PaiementController extends Controller
         }, $nom, ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
+    /** Export PDF (A4 paysage) : totaux + liste des tickets de la période filtrée. */
+    public function exportPdf(Request $request): Response
+    {
+        $filtres = $this->filtres($request);
+        $base = $this->requete($filtres);
+        $valides = (clone $base)->valides();
+        $limite = 3000;
+
+        $pdf = Pdf::setOptions([
+            // Durcissement : aucune ressource distante, aucun code PHP ni JavaScript dans le document
+            'isRemoteEnabled' => false,
+            'isPhpEnabled' => false,
+            'isJavascriptEnabled' => false,
+            'chroot' => resource_path('views'),
+        ])->loadView('admin.paiements.pdf', [
+            'filtres' => $filtres,
+            'paiements' => (clone $base)->with(['client', 'user:id,name', 'abonnement.formule'])->orderBy('id')->limit($limite)->get(),
+            'tronque' => (clone $base)->count() > $limite,
+            'total' => (clone $valides)->sum('montant'),
+            'nombre' => (clone $valides)->count(),
+            'annules' => (clone $base)->whereNotNull('annule_le')->count(),
+            'parMode' => (clone $valides)->selectRaw('mode, SUM(montant) as total, COUNT(*) as nombre')->groupBy('mode')->orderByDesc('total')->get(),
+            'parCaissier' => (clone $valides)->selectRaw('user_id, SUM(montant) as total, COUNT(*) as nombre')->groupBy('user_id')->with('user:id,name')->get(),
+            'caissier' => $filtres['user_id'] ? User::find($filtres['user_id'])?->name : null,
+        ])->setPaper('a4', 'landscape');
+
+        $nom = sprintf('encaissements_%s_%s.pdf', $filtres['du']->format('Ymd'), $filtres['au']->format('Ymd'));
+
+        return $pdf->download($nom);
+    }
+
     public function annuler(Request $request, Paiement $paiement, CaisseService $caisse): RedirectResponse
     {
         $data = $request->validate([
@@ -109,7 +142,7 @@ class PaiementController extends Controller
     {
         $request->validate([
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
-            'mode' => ['nullable', Rule::in(array_keys(Paiement::MODES))],
+            'moyen' => ['nullable', Rule::in(array_keys(Paiement::MODES))],
             'type' => ['nullable', Rule::in(array_keys(Paiement::TYPES))],
         ]);
 
@@ -120,7 +153,7 @@ class PaiementController extends Controller
             'du' => $periode->du,
             'au' => $periode->au,
             'user_id' => $request->integer('user_id') ?: null,
-            'mode' => $request->query('mode'),
+            'mode' => $request->query('moyen'), // « mode » est pris par le filtre de période
             'type' => $request->query('type'),
         ];
     }
