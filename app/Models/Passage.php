@@ -7,21 +7,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Passage extends Model
 {
-    public const METHODE_BADGE = 'badge';
+    public const METHODE_EMPREINTE = 'empreinte';
     public const METHODE_CAISSE = 'caisse';
 
     public const STATUT_AUTORISE = 'autorise';
     public const STATUT_REFUSE = 'refuse';
 
     public const MOTIFS = [
-        'badge_inconnu' => 'Badge non reconnu',
+        'empreinte_inconnue' => 'Empreinte non reconnue',
         'abonnement_expire' => 'Abonnement expiré ou inexistant',
         'paiement_requis' => 'Paiement journalier requis à la caisse',
     ];
 
     protected $fillable = [
         'client_id', 'lecteur_id', 'user_id', 'paiement_id',
-        'methode', 'statut', 'motif', 'badge_id', 'passe_le',
+        'methode', 'statut', 'motif', 'empreinte_id', 'passe_le',
     ];
 
     protected function casts(): array

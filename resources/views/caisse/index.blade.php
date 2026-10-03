@@ -2,145 +2,178 @@
 @section('title', 'Caisse')
 
 @php
-    use App\Models\Paiement;
     use App\Support\Fcfa;
+    use Illuminate\Support\Carbon;
+    $ongletClasse = 'flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition aria-selected:bg-brand-500 aria-selected:text-white aria-selected:shadow-sm text-slate-600 hover:text-slate-900';
 @endphp
 
 @section('content')
-<x-page-header title="Caisse" subtitle="Bonjour {{ auth()->user()->name }} — encaissez un passage ou un abonnement, le ticket s'imprime automatiquement.">
-    <a href="{{ route('clients.create') }}" class="btn-light"><x-icon name="user-plus" class="size-4"/> Nouveau client</a>
-</x-page-header>
+<div class="mb-6">
+    <h1 class="text-3xl font-bold tracking-tight text-slate-900">Caisse / Enregistrement</h1>
+    <p class="mt-1 text-slate-500">Gérez vos ventes et enregistrements. Le ticket s'imprime à chaque encaissement.</p>
+</div>
 
-<div class="grid gap-6 xl:grid-cols-3">
-    {{-- Encaissement --}}
-    <div class="xl:col-span-2" data-tabs="{{ $onglet }}">
-        <div class="mb-4 inline-flex rounded-2xl bg-slate-200/70 p-1.5" role="tablist">
-            <button type="button" data-tab="passage" role="tab" class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition">
-                <x-icon name="bolt" class="size-5"/> Passage (séance)
-            </button>
-            <button type="button" data-tab="abonnement" role="tab" class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition">
-                <x-icon name="card" class="size-5"/> Abonnement
-            </button>
-        </div>
+<div data-tabs="{{ $onglet }}" data-tabs-simple>
+    <div class="card mb-6 flex gap-1 p-1.5" role="tablist">
+        <button type="button" data-tab="passage" role="tab" class="{{ $ongletClasse }}"><x-icon name="ticket" class="size-5"/> Entrée de passage</button>
+        <button type="button" data-tab="abonnement" role="tab" class="{{ $ongletClasse }}"><x-icon name="calendar" class="size-5"/> Abonnement</button>
+        <button type="button" data-tab="renouvellement" role="tab" class="{{ $ongletClasse }}"><x-icon name="refresh" class="size-5"/> Renouvellement
+            @if($aRenouveler->isNotEmpty())<span class="rounded-full bg-orange-500 px-1.5 text-[10px] text-white">{{ $aRenouveler->count() }}</span>@endif
+        </button>
+    </div>
 
-        {{-- Passage journalier --}}
-        <form data-panel="passage" method="POST" action="{{ route('caisse.journalier') }}" class="card">
-            @csrf
-            <div class="card-header">
-                <div>
-                    <h2 class="card-title">Entrée journalière</h2>
-                    <p class="text-xs text-slate-500">Le client entre tout de suite. Identification facultative.</p>
-                </div>
-                <span class="pill-brand text-sm">Tarif : {{ Fcfa::format($tarifJournalier) }}</span>
-            </div>
-            <div class="card-body space-y-5">
-                @include('caisse._recherche', ['requis' => false, 'preselection' => null])
-
-                <div class="grid gap-4 sm:grid-cols-2">
+    {{-- ============ PASSAGE ============ --}}
+    <form data-panel="passage" data-calcul-passage data-prix="{{ $tarifJournalier }}" method="POST" action="{{ route('caisse.journalier') }}" class="grid gap-6 xl:grid-cols-3">
+        @csrf
+        <div class="card p-6 xl:col-span-2">
+            <h2 class="mb-6 flex items-center gap-3 text-lg font-semibold text-slate-900">
+                <span class="pastille size-9 bg-emerald-50 text-emerald-600"><x-icon name="ticket" class="size-5"/></span> Passage
+            </h2>
+            <div class="space-y-5">
+                <div class="grid gap-4 sm:grid-cols-3">
                     <div>
-                        <label for="j-nom" class="label">Nom <span class="font-normal text-slate-400">(nouveau client)</span></label>
-                        <input id="j-nom" type="text" name="nom" value="{{ old('nom') }}" maxlength="100" class="input">
+                        <span class="label">Type de ticket</span>
+                        <p class="input bg-slate-50">Entrée simple (1 jour)</p>
                     </div>
                     <div>
-                        <label for="j-tel" class="label">Téléphone</label>
-                        <input id="j-tel" type="tel" name="telephone" value="{{ old('telephone') }}" maxlength="20" class="input" placeholder="07 00 00 00 00">
+                        <label for="quantite" class="label">Quantité</label>
+                        <div class="flex items-center rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+                            <button type="button" data-quantite-moins class="px-3.5 py-2.5 text-slate-600 hover:text-brand-600" aria-label="Moins"><x-icon name="minus" class="size-4"/></button>
+                            <input id="quantite" name="quantite" type="number" min="1" max="10" value="{{ old('quantite', 1) }}" data-quantite
+                                   class="w-full border-0 bg-transparent py-2.5 text-center text-sm font-semibold focus:outline-none">
+                            <button type="button" data-quantite-plus class="px-3.5 py-2.5 text-slate-600 hover:text-brand-600" aria-label="Plus"><x-icon name="plus" class="size-4"/></button>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="label">Prix unitaire</span>
+                        <p class="input bg-slate-50">{{ Fcfa::format($tarifJournalier) }}</p>
                     </div>
                 </div>
 
                 @include('caisse._modes', ['prefixe' => 'j'])
-            </div>
-            <div class="flex flex-wrap items-center justify-between gap-4 rounded-b-2xl border-t border-slate-100 bg-slate-50 px-5 py-4">
-                <div>
-                    <p class="text-xs uppercase tracking-wide text-slate-500">À encaisser</p>
-                    <p class="text-3xl font-extrabold text-slate-900">{{ Fcfa::format($tarifJournalier) }}</p>
-                </div>
-                <button type="submit" class="btn-primary btn-lg"><x-icon name="printer" class="size-5"/> Encaisser &amp; imprimer le ticket</button>
-            </div>
-        </form>
 
-        {{-- Abonnement --}}
-        <form data-panel="abonnement" data-recap-source method="POST" action="{{ route('caisse.abonnement') }}" class="card" hidden>
-            @csrf
-            <div class="card-header">
                 <div>
-                    <h2 class="card-title">Abonnement / renouvellement</h2>
-                    <p class="text-xs text-slate-500">Renouvellement anticipé : le nouvel abonnement démarre le lendemain de la fin de l'actuel, aucun jour perdu.</p>
+                    <span class="label">Client <span class="font-normal text-slate-400">(optionnel)</span></span>
+                    @include('caisse._recherche', ['requis' => false, 'preselection' => null])
+                    <details class="mt-2 text-sm" @if(old('nom') || old('telephone')) open @endif>
+                        <summary class="cursor-pointer text-brand-600 hover:underline">Nouveau client ? Saisir son nom et son téléphone</summary>
+                        <div class="mt-3 grid gap-4 sm:grid-cols-2">
+                            <input type="text" name="nom" value="{{ old('nom') }}" maxlength="100" class="input" placeholder="Nom">
+                            <input type="tel" name="telephone" value="{{ old('telephone') }}" maxlength="20" class="input" placeholder="Téléphone">
+                        </div>
+                    </details>
+                </div>
+
+                <div>
+                    <span class="label">Montant total</span>
+                    <p data-total class="input bg-slate-50 py-3 text-lg font-bold">{{ Fcfa::format($tarifJournalier) }}</p>
+                </div>
+
+                <button type="submit" class="btn-primary btn-lg w-full"><x-icon name="printer" class="size-5"/> Valider la vente</button>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="card p-6">
+                <h3 class="mb-4 font-semibold text-slate-900">Récapitulatif</h3>
+                <div class="flex justify-between text-sm text-slate-600"><span>Entrée simple (1 jour) × <span data-recap-quantite>1</span></span><span data-total-court>{{ Fcfa::format($tarifJournalier) }}</span></div>
+                <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
+                    <span class="font-semibold">Total</span><span data-total-court class="text-xl font-bold text-slate-900">{{ Fcfa::format($tarifJournalier) }}</span>
                 </div>
             </div>
-            <div class="card-body space-y-5">
-                @include('caisse._recherche', ['requis' => true, 'preselection' => $clientPreselectionne])
-                <p class="-mt-3 text-xs text-slate-500">Client pas encore enregistré ? <a href="{{ route('clients.create', ['apres' => 'abonner']) }}" class="link">Créez sa fiche</a>, vous revenez ici ensuite.</p>
+            <div class="card flex gap-3 bg-sky-50/60 p-5 ring-sky-100">
+                <x-icon name="user" class="size-6 shrink-0 text-sky-600"/>
+                <div class="text-sm">
+                    <p class="font-semibold text-slate-900">Besoin d'un abonnement ?</p>
+                    <button type="button" data-tab-aller="abonnement" class="link mt-1 inline-flex items-center gap-1">Aller à l'onglet Abonnement <x-icon name="arrow-right" class="size-4"/></button>
+                </div>
+            </div>
+            @include('caisse._resume')
+        </div>
+    </form>
+
+    {{-- ============ ABONNEMENT ============ --}}
+    <form data-panel="abonnement" data-recap-source method="POST" action="{{ route('caisse.abonnement') }}" class="grid gap-6 xl:grid-cols-3" hidden>
+        @csrf
+        <div class="card p-6 xl:col-span-2">
+            <h2 class="mb-6 flex items-center gap-3 text-lg font-semibold text-slate-900">
+                <span class="pastille size-9 bg-sky-50 text-sky-600"><x-icon name="calendar" class="size-5"/></span> Abonnement
+            </h2>
+            <div class="space-y-5">
+                <div>
+                    <span class="label">Client *</span>
+                    @include('caisse._recherche', ['requis' => true, 'preselection' => $clientPreselectionne])
+                    <p class="mt-2 text-xs text-slate-500">Pas encore de fiche ? <a href="{{ route('clients.index', ['nouveau' => 1]) }}" class="link">Créer le client</a>, vous revenez ici ensuite.</p>
+                </div>
 
                 <fieldset>
-                    <legend class="label">Formule</legend>
+                    <legend class="label">Formule *</legend>
                     @if($formules->isEmpty())
                         <p class="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Aucune formule active. Le responsable doit en créer dans « Formules &amp; tarifs ».</p>
                     @endif
                     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         @foreach($formules as $formule)
                             <label class="choice">
-                                <input type="radio" name="formule_id" value="{{ $formule->id }}" data-prix="{{ Fcfa::format($formule->prix) }}" required
+                                <input type="radio" name="formule_id" value="{{ $formule->id }}" required
+                                       data-prix="{{ Fcfa::format($formule->prix) }}" data-nom="{{ $formule->nom }} ({{ $formule->duree_jours }} jours)"
                                        @checked((int) old('formule_id', $loop->first ? $formule->id : 0) === $formule->id)>
                                 <span class="text-sm font-semibold text-slate-900">{{ $formule->nom }}</span>
                                 <span class="text-xs text-slate-500">{{ $formule->duree_jours }} jours</span>
-                                <span class="mt-3 whitespace-nowrap text-base font-extrabold text-brand-600">{{ Fcfa::format($formule->prix) }}</span>
+                                <span class="mt-3 whitespace-nowrap text-base font-bold text-brand-600">{{ Fcfa::format($formule->prix) }}</span>
                             </label>
                         @endforeach
                     </div>
                 </fieldset>
 
                 @include('caisse._modes', ['prefixe' => 'a'])
+
+                <button type="submit" class="btn-primary btn-lg w-full"><x-icon name="printer" class="size-5"/> Valider l'abonnement</button>
             </div>
-            <div class="flex flex-wrap items-center justify-between gap-4 rounded-b-2xl border-t border-slate-100 bg-slate-50 px-5 py-4">
-                <div>
-                    <p class="text-xs uppercase tracking-wide text-slate-500">À encaisser</p>
-                    <p data-recap-montant class="text-3xl font-extrabold text-slate-900">—</p>
+        </div>
+
+        <div class="space-y-6">
+            <div class="card p-6">
+                <h3 class="mb-4 font-semibold text-slate-900">Récapitulatif</h3>
+                <div class="flex justify-between gap-3 text-sm text-slate-600"><span data-recap-nom>—</span><span data-recap-montant>—</span></div>
+                <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
+                    <span class="font-semibold">Total</span><span data-recap-montant class="text-xl font-bold text-slate-900">—</span>
                 </div>
-                <button type="submit" class="btn-dark btn-lg"><x-icon name="printer" class="size-5"/> Encaisser l'abonnement</button>
+                <p class="mt-4 text-xs text-slate-500">Renouvellement anticipé : le nouvel abonnement démarre le lendemain de la fin de l'actuel. Aucun jour perdu.</p>
             </div>
-        </form>
-    </div>
+            @include('caisse._resume')
+        </div>
+    </form>
 
-    {{-- Résumé de la journée --}}
-    <div class="space-y-6">
-        <div class="card overflow-hidden">
-            <div class="bg-gradient-to-br from-ink-900 to-ink-800 p-5 text-white">
-                <p class="text-sm text-slate-300">{{ auth()->user()->isAdmin() ? 'Caisse du jour (tous postes)' : 'Ma caisse aujourd\'hui' }}</p>
-                <p class="mt-1 text-3xl font-extrabold">{{ Fcfa::format($totalJour) }}</p>
-                <p class="mt-1 text-sm text-slate-400">{{ $nombreJour }} encaissement(s)</p>
+    {{-- ============ RENOUVELLEMENT ============ --}}
+    <section data-panel="renouvellement" class="card overflow-hidden" hidden>
+        <div class="card-header">
+            <div>
+                <h2 class="text-lg font-semibold text-slate-900">Abonnements à renouveler</h2>
+                <p class="text-xs text-slate-500">Fin dans les 7 prochains jours ou depuis moins de 30 jours. Un clic ouvre l'onglet Abonnement avec le client.</p>
             </div>
-            <ul class="divide-y divide-slate-100 text-sm">
-                @forelse($parMode as $mode => $montant)
-                    <li class="flex justify-between px-5 py-2.5"><span class="text-slate-600">{{ Paiement::MODES[$mode] ?? $mode }}</span><span class="font-semibold">{{ Fcfa::format($montant) }}</span></li>
-                @empty
-                    <li class="px-5 py-3 text-slate-400">Aucun encaissement pour l'instant.</li>
-                @endforelse
-            </ul>
         </div>
-
-        <div class="card">
-            <div class="card-header"><h2 class="card-title">Derniers tickets</h2></div>
-            <ul class="divide-y divide-slate-100">
-                @forelse($paiements as $paiement)
-                    <li class="flex items-center gap-3 px-5 py-3 {{ $paiement->estAnnule() ? 'opacity-50' : '' }}">
-                        <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl {{ $paiement->abonnement_id ? 'bg-ink-900 text-white' : 'bg-brand-50 text-brand-600' }}">
-                            <x-icon :name="$paiement->abonnement_id ? 'card' : 'bolt'" class="size-4"/>
-                        </span>
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-semibold {{ $paiement->estAnnule() ? 'line-through' : '' }}">{{ $paiement->client?->nom_complet ?? 'Client anonyme' }}</p>
-                            <p class="truncate text-xs text-slate-500">
-                                {{ $paiement->created_at->format('H:i') }} ·
-                                {{ $paiement->abonnement ? $paiement->abonnement->formule->nom : 'Passage' }} ·
-                                <a href="{{ route('recus.show', $paiement) }}" class="link">{{ $paiement->numero_recu }}</a>
-                            </p>
-                        </div>
-                        <span class="text-sm font-bold {{ $paiement->estAnnule() ? 'line-through' : '' }}">{{ Fcfa::format($paiement->montant) }}</span>
-                    </li>
+        <div class="overflow-x-auto">
+            <table class="table">
+                <thead><tr><th>Client</th><th>Téléphone</th><th>Fin des droits</th><th>Statut</th><th></th></tr></thead>
+                <tbody>
+                @forelse($aRenouveler as $c)
+                    @php $fin = Carbon::parse($c->fin); $jours = (int) today()->diffInDays($fin, false); @endphp
+                    <tr>
+                        <td><a href="{{ route('clients.show', $c) }}" class="flex items-center gap-2 font-medium text-slate-900 hover:text-brand-600"><x-avatar :client="$c" size="size-8" text="text-xs"/> {{ $c->nom_complet }}</a></td>
+                        <td>{{ $c->telephone ?? '—' }}</td>
+                        <td>{{ $fin->format('d/m/Y') }}</td>
+                        <td>
+                            @if($jours >= 0)<span class="pill-amber"><x-icon name="clock" class="size-3"/> {{ $jours === 0 ? 'Expire aujourd\'hui' : 'Expire dans '.$jours.' j' }}</span>
+                            @else<span class="pill-red"><x-icon name="x" class="size-3"/> Expiré depuis {{ -$jours }} j</span>@endif
+                        </td>
+                        <td class="text-right"><a href="{{ route('caisse.index', ['client_id' => $c->id]) }}" class="btn-primary btn-sm"><x-icon name="refresh" class="size-3.5"/> Renouveler</a></td>
+                    </tr>
                 @empty
-                    <li class="px-5 py-6 text-center text-sm text-slate-400">Aucun ticket aujourd'hui.</li>
+                    <tr><td colspan="5" class="py-12 text-center text-slate-400">Aucun abonnement à renouveler pour le moment.</td></tr>
                 @endforelse
-            </ul>
+                </tbody>
+            </table>
         </div>
-    </div>
+    </section>
 </div>
 @endsection

@@ -9,16 +9,14 @@
     @vite(['resources/css/app.css', 'resources/js/accueil.js'])
 </head>
 <body class="h-full overflow-hidden bg-ink-950 text-white">
-<div data-accueil data-url-dernier="{{ route('accueil.dernier') }}" data-url-scan="{{ route('accueil.scan') }}"
-     class="relative flex h-full flex-col bg-[radial-gradient(ellipse_at_top,_rgba(249,115,22,0.18),_transparent_60%)]">
+<div data-accueil data-url-dernier="{{ route('accueil.dernier') }}" data-url-scan="{{ route('accueil.scan') }}" class="relative flex h-full flex-col">
+    <img src="{{ asset('images/connexion.webp') }}" alt="" class="absolute inset-0 size-full object-cover opacity-25">
+    <div class="absolute inset-0 bg-gradient-to-b from-ink-950/80 via-ink-950/70 to-ink-950/95"></div>
 
-    <header class="flex items-center justify-between px-10 py-6">
-        <div class="flex items-center gap-4">
-            <x-logo class="size-14"/>
-            <div>
-                <p class="text-3xl font-extrabold tracking-tight">{{ config('salle.nom') }}</p>
-                <p class="text-sm text-slate-400">{{ config('salle.adresse') }}</p>
-            </div>
+    <header class="relative flex items-center justify-between px-10 py-7">
+        <div class="flex items-center gap-3">
+            <x-logo class="h-12 w-12"/>
+            <span class="text-3xl font-extrabold tracking-tight">{{ config('salle.nom') }}</span>
         </div>
         <div class="text-right">
             <p id="horloge" class="text-5xl font-bold tabular-nums"></p>
@@ -26,22 +24,25 @@
         </div>
     </header>
 
-    <main class="flex flex-1 items-center justify-center px-10 pb-10">
+    <main class="relative flex flex-1 items-center justify-center px-10">
+        {{-- En attente : illustration de la pointeuse --}}
         <div id="attente" class="text-center">
-            <div class="relative mx-auto mb-10 flex size-56 items-center justify-center">
-                <span class="absolute inset-0 animate-ping rounded-full bg-brand-500/20 [animation-duration:2.5s]"></span>
-                <span class="absolute inset-6 rounded-full bg-brand-500/10 ring-1 ring-brand-400/30"></span>
-                <x-icon name="card" class="relative size-24 text-brand-400"/>
+            <div class="relative mx-auto mb-10 flex h-64 w-48 items-center justify-center rounded-[2.2rem] bg-gradient-to-b from-ink-700 to-ink-900 shadow-2xl ring-1 ring-white/15">
+                <div class="absolute inset-3 rounded-[1.7rem] bg-ink-950/80 ring-1 ring-brand-400/30"></div>
+                <span class="absolute inset-10 animate-pulse rounded-3xl bg-brand-500/10 blur-xl [animation-duration:2.5s]"></span>
+                <x-icon name="fingerprint" class="relative size-28 text-brand-400 drop-shadow-[0_0_18px_rgba(45,182,121,0.7)]"/>
+                <span class="absolute bottom-6 h-1 w-14 rounded-full bg-brand-400/70"></span>
             </div>
-            <p class="text-5xl font-bold tracking-tight">Passez votre badge</p>
-            <p class="mt-4 text-xl text-slate-400">sur le lecteur pour entrer</p>
+            <p class="text-5xl font-bold tracking-tight">Présentez votre doigt</p>
+            <p class="mt-3 text-xl text-slate-300">Accès membre</p>
         </div>
 
+        {{-- Résultat du passage --}}
         <div id="fiche" data-etat="ok" role="status" aria-live="assertive"
-             class="group hidden w-full max-w-4xl rounded-[2.5rem] p-12 text-center shadow-2xl
-                    data-[etat=ok]:bg-gradient-to-br data-[etat=ok]:from-emerald-500 data-[etat=ok]:to-emerald-700 data-[etat=ok]:shadow-emerald-900/50
-                    data-[etat=ko]:bg-gradient-to-br data-[etat=ko]:from-red-500 data-[etat=ko]:to-red-700 data-[etat=ko]:shadow-red-900/50">
-            <div class="mx-auto mb-8 flex size-48 items-center justify-center overflow-hidden rounded-full bg-white/15 ring-8 ring-white/25">
+             class="hidden w-full max-w-4xl rounded-[2.5rem] p-12 text-center shadow-2xl
+                    data-[etat=ok]:bg-gradient-to-br data-[etat=ok]:from-brand-500 data-[etat=ok]:to-brand-700
+                    data-[etat=ko]:bg-gradient-to-br data-[etat=ko]:from-red-500 data-[etat=ko]:to-red-700">
+            <div class="mx-auto mb-8 flex size-44 items-center justify-center overflow-hidden rounded-full bg-white/15 ring-8 ring-white/25">
                 <img id="photo" alt="" class="hidden size-full object-cover">
                 <span id="initiale" class="text-7xl font-black"></span>
             </div>
@@ -53,12 +54,15 @@
         </div>
     </main>
 
-    <div id="hors-ligne" class="hidden absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-red-600 px-5 py-2 text-sm font-semibold">
+    <footer class="relative flex items-center justify-center gap-6 pb-10">
+        <a href="{{ url('/') }}" class="inline-flex items-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold ring-1 ring-white/40 hover:bg-white/10"><x-icon name="arrow-left" class="size-5"/> Retour</a>
+        <a href="{{ route('caisse.index') }}" class="inline-flex items-center gap-2 rounded-xl px-6 py-3.5 text-base font-semibold text-sky-300 hover:bg-white/10"><x-icon name="cash" class="size-5"/> Accès caisse</a>
+        <button id="plein-ecran" type="button" class="absolute right-6 rounded-full bg-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/20">Plein écran</button>
+    </footer>
+
+    <div id="hors-ligne" class="absolute left-1/2 top-6 hidden -translate-x-1/2 rounded-full bg-red-600 px-5 py-2 text-sm font-semibold">
         Connexion au serveur perdue — nouvelle tentative…
     </div>
-    <button id="plein-ecran" type="button" class="absolute bottom-6 right-6 rounded-full bg-white/10 px-4 py-2 text-xs text-slate-300 hover:bg-white/20">
-        Plein écran
-    </button>
 </div>
 </body>
 </html>

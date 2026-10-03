@@ -7,6 +7,9 @@ use App\Models\Client;
 use App\Models\Paiement;
 use App\Models\Passage;
 use Carbon\CarbonInterface;
+use App\Models\Formule;
+use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 class KpiService
@@ -151,5 +154,101 @@ class KpiService
             })
             ->orderBy('date_fin')
             ->get();
+    }
+
+    /**
+     * Recettes des N derniers jours, séparées abonnements / passages.
+     * Avec $caissier : uniquement ses encaissements.
+     *
+     * @return list<array{jour: CarbonImmutable, abonnement: int, journalier: int}>
+     */
+    public function recettesParJour(int $jours = 7, ?User $caissier = null): array
+    {
+        $debut = CarbonImmutable::today()->subDays($jours - 1);
+
+        $paiements = Paiement::valides()
+            ->where('created_at', '>=', $debut)
+            ->when($caissier, fn ($q) => $q->where('user_id', $caissier->id))
+            ->get(['type', 'montant', 'created_at']);
+
+        return collect(range(0, $jours - 1))->map(function (int $i) use ($debut, $paiements) {
+            $jour = $debut->addDays($i);
+            $duJour = $paiements->filter(fn ($p) => $p->created_at->isSameDay($jour));
+
+            return [
+                'jour' => $jour,
+                'abonnement' => (int) $duJour->where('type', Paiement::TYPE_ABONNEMENT)->sum('montant'),
+                'journalier' => (int) $duJour->where('type', Paiement::TYPE_JOURNALIER)->sum('montant'),
+            ];
+        })->all();
+    }
+
+    /** Variation en % entre deux valeurs (null si la référence est nulle). */
+    public static function variation(int|float $actuel, int|float $reference): ?float
+    {
+        return $reference > 0 ? round(100 * ($actuel - $reference) / $reference) : null;
+    }
+
+    /** Chiffres d'un jour pour la caisse (un caissier, ou toute la salle). */
+    public function chiffresCaisse(CarbonInterface $jour, ?User $caissier = null): array
+    {
+        $paiements = Paiement::valides()
+            ->whereDate('created_at', $jour->toDateString())
+            ->when($caissier, fn ($q) => $q->where('user_id', $caissier->id))
+            ->with('abonnement:id,est_renouvellement')
+            ->get();
+
+        $abonnements = $paiements->where('type', Paiement::TYPE_ABONNEMENT);
+
+        return [
+            'recette' => (int) $paiements->sum('montant'),
+            'tickets' => $paiements->count(),
+            'passages_vendus' => (int) $paiements->where('type', Paiement::TYPE_JOURNALIER)->sum('quantite'),
+            'abonnements' => $abonnements->filter(fn ($p) => ! $p->abonnement?->est_renouvellement)->count(),
+            'renouvellements' => $abonnements->filter(fn ($p) => $p->abonnement?->est_renouvellement)->count(),
+            'entrees' => Passage::whereDate('passe_le', $jour->toDateString())->where('statut', Passage::STATUT_AUTORISE)->count(),
+        ];
+    }
+
+    /** Clients : abonnés en règle / abonnés expirés / journaliers. */
+    public function repartitionClients(): array
+    {
+        $enRegle = $this->nombreAbonnementsEnCours();
+        $abonnes = Client::abonnes()->count();
+
+        return [
+            ['libelle' => 'Abonnés en règle', 'valeur' => $enRegle],
+            ['libelle' => 'Abonnés expirés', 'valeur' => max(0, $abonnes - $enRegle)],
+            ['libelle' => 'Journaliers', 'valeur' => Client::journaliers()->count()],
+        ];
+    }
+
+    /** Formules les plus vendues (abonnements en cours). */
+    public function topFormules(int $limite = 5): Collection
+    {
+        return Formule::withCount(['abonnements as en_cours' => fn ($q) => $q->enCours()])
+            ->orderByDesc('en_cours')->orderBy('duree_jours')
+            ->limit($limite)->get();
+    }
+
+    /** Dernières actions dans la salle : nouveaux clients, abonnements, tickets. */
+    public function activiteRecente(int $limite = 6): Collection
+    {
+        $clients = Client::latest('id')->limit($limite)->get()->map(fn (Client $c) => [
+            'quand' => $c->created_at, 'type' => 'client', 'titre' => 'Nouveau client', 'detail' => $c->nom_complet, 'client' => $c,
+        ]);
+
+        $paiements = Paiement::valides()->with(['client', 'abonnement.formule'])->latest('id')->limit($limite)->get()
+            ->map(fn (Paiement $p) => [
+                'quand' => $p->created_at,
+                'type' => $p->abonnement ? ($p->abonnement->est_renouvellement ? 'renouvellement' : 'abonnement') : 'passage',
+                'titre' => $p->abonnement
+                    ? ($p->abonnement->est_renouvellement ? 'Renouvellement' : 'Abonnement').' '.$p->abonnement->formule->nom
+                    : 'Ticket passage'.($p->quantite > 1 ? ' × '.$p->quantite : ''),
+                'detail' => $p->client?->nom_complet ?? 'Client anonyme',
+                'client' => $p->client,
+            ]);
+
+        return $clients->concat($paiements)->sortByDesc('quand')->take($limite)->values();
     }
 }

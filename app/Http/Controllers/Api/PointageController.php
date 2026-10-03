@@ -5,28 +5,25 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Services\PointageService;
-use App\Support\Badge;
+use App\Support\Empreinte;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/** API générique (agent local ou autre appareil) : authentifiée par token. */
 class PointageController extends Controller
 {
     /**
-     * POST /api/pointage/badge
-     * Header : Authorization: Bearer <token du lecteur>
-     * Body   : { "badge_id": "0012345678" }   (ancien nom accepté : empreinte_id)
+     * POST /api/pointage/empreinte
+     * Header : Authorization: Bearer <token>
+     * Body   : { "empreinte_id": "12" }
      */
-    public function badge(Request $request, PointageService $pointage): JsonResponse
+    public function empreinte(Request $request, PointageService $pointage): JsonResponse
     {
-        if (! $request->filled('badge_id') && $request->filled('empreinte_id')) {
-            $request->merge(['badge_id' => $request->input('empreinte_id')]);
-        }
-
         $data = $request->validate([
-            'badge_id' => ['required', 'string', Badge::REGLE],
+            'empreinte_id' => ['required', 'string', Empreinte::REGLE],
         ]);
 
-        $passage = $pointage->parBadge($data['badge_id'], $request->attributes->get('lecteur'));
+        $passage = $pointage->parEmpreinte($data['empreinte_id'], $request->attributes->get('lecteur'));
         $passage->load('client');
 
         $client = $passage->client;

@@ -23,7 +23,7 @@
                 @elseif($client->type === Client::TYPE_ABONNE)
                     <span class="pill-red">Abonnement expiré</span>
                 @endif
-                <span class="pill-gray"><x-icon name="card" class="size-3.5"/> {{ $client->badge_id ? 'Badge '.$client->badge_id : 'Pas de badge' }}</span>
+                <span class="pill-gray"><x-icon name="fingerprint" class="size-3.5"/> {{ $client->empreinte_id ? 'Empreinte n°'.$client->empreinte_id : 'Empreinte non enregistrée' }}</span>
                 @if($client->telephone)<span class="text-slate-500">{{ $client->telephone }}</span>@endif
             </div>
         </div>
@@ -79,7 +79,7 @@
                 <li class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
                     <span>
                         <span class="block font-medium">{{ $passage->passe_le->format('d/m/Y H:i') }}</span>
-                        <span class="text-xs text-slate-500">{{ $passage->methode === Passage::METHODE_BADGE ? 'Badge' : 'Caisse' }}</span>
+                        <span class="text-xs text-slate-500">{{ $passage->methode === Passage::METHODE_EMPREINTE ? 'Empreinte' : 'Caisse' }}</span>
                     </span>
                     @if($passage->estAutorise())<span class="pill-green">Entré</span>@else<span class="pill-red">{{ $passage->message() }}</span>@endif
                 </li>

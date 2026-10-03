@@ -27,13 +27,14 @@ class Paiement extends Model
 
     protected $fillable = [
         'numero_recu', 'client_id', 'abonnement_id', 'user_id',
-        'type', 'montant', 'mode', 'reference',
+        'type', 'montant', 'quantite', 'mode', 'reference',
     ];
 
     protected function casts(): array
     {
         return [
             'montant' => 'integer',
+            'quantite' => 'integer',
             'annule_le' => 'datetime',
         ];
     }
