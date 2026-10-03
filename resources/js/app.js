@@ -200,3 +200,16 @@ $$('[data-no-enter]').forEach((champ) => {
         if (e.key === 'Enter') e.preventDefault();
     });
 });
+
+// --- Afficher / masquer le mot de passe ---
+$$('[data-afficher-mdp]').forEach((bouton) => {
+    const champ = document.getElementById(bouton.dataset.afficherMdp);
+    bouton.addEventListener('click', () => {
+        const visible = champ.type === 'password';
+        champ.type = visible ? 'text' : 'password';
+        bouton.setAttribute('aria-label', visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+        bouton.querySelector('[data-oeil-ferme]')?.classList.toggle('hidden', visible);
+        bouton.querySelector('[data-oeil-ouvert]')?.classList.toggle('hidden', !visible);
+        champ.focus();
+    });
+});
