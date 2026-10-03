@@ -58,7 +58,7 @@ class PaiementController extends Controller
                         $p->created_at->format('d/m/Y H:i'),
                         $p->client?->nom_complet ?? 'Anonyme',
                         $p->client?->telephone ?? '',
-                        $p->abonnement ? 'Abonnement '.$p->abonnement->formule->nom : 'Entrée journalière',
+                        $p->abonnement ? 'Abonnement '.$p->abonnement->formule->nom : 'Entrée journalière × '.$p->quantite,
                         Paiement::MODES[$p->mode] ?? $p->mode,
                         $p->reference ?? '',
                         $p->montant,

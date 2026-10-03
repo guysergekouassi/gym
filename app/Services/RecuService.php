@@ -56,7 +56,7 @@ class RecuService
 
             $libelle = $paiement->abonnement
                 ? 'Abonnement '.$paiement->abonnement->formule->nom
-                : 'Entree journaliere';
+                : 'Entree journaliere'.($paiement->quantite > 1 ? ' x '.$paiement->quantite : '');
             $imprimante->text('Objet    : '.$t($libelle)."\n");
 
             if ($paiement->abonnement) {

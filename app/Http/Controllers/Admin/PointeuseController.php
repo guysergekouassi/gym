@@ -22,9 +22,27 @@ class PointeuseController extends Controller
                 'commandes as en_attente' => fn ($q) => $q->whereIn('statut', [CommandePointeuse::EN_ATTENTE, CommandePointeuse::ENVOYEE]),
                 'commandes as en_erreur' => fn ($q) => $q->where('statut', CommandePointeuse::ERREUR),
             ])->orderByDesc('actif')->orderBy('nom')->get(),
-            'adresseServeur' => $request->getHost(),
+            'adresseServeur' => $this->adresseLocale($request),
             'portServeur' => $request->getPort(),
         ]);
+    }
+
+    /**
+     * Adresse à saisir dans la pointeuse : l'IP du PC sur le réseau local.
+     * « localhost » / 127.0.0.1 ne fonctionnent pas depuis l'appareil.
+     */
+    private function adresseLocale(Request $request): ?string
+    {
+        $hote = $request->getHost();
+        if (filter_var($hote, FILTER_VALIDATE_IP) && ! str_starts_with($hote, '127.')) {
+            return $hote;
+        }
+
+        $candidates = array_filter(gethostbynamel(gethostname()) ?: [], fn ($ip) => filter_var(
+            $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4
+        ) && ! str_starts_with($ip, '127.') && ! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE));
+
+        return array_values($candidates)[0] ?? null;
     }
 
     public function store(Request $request): RedirectResponse

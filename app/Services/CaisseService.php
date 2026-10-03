@@ -20,24 +20,29 @@ class CaisseService
      * Encaisse une entrée journalière, enregistre le passage et numérote le reçu.
      * Le montant est toujours le tarif fixé par l'admin : la caissière ne le saisit pas.
      *
-     * @param  array{client_id?: ?int, nom?: ?string, telephone?: ?string, mode: string, reference?: ?string}  $data
+     * @param  array{client_id?: ?int, nom?: ?string, telephone?: ?string, quantite?: ?int, mode: string, reference?: ?string}  $data
      */
     public function encaisserJournalier(array $data, User $caissier): Paiement
     {
         return DB::transaction(function () use ($data, $caissier) {
             $client = $this->resoudreClientJournalier($data);
+            $quantite = max(1, min(10, (int) ($data['quantite'] ?? 1)));
 
             $paiement = Paiement::create([
                 'client_id' => $client?->id,
                 'user_id' => $caissier->id,
                 'type' => Paiement::TYPE_JOURNALIER,
-                'montant' => Parametre::tarifJournalier(),
+                'montant' => Parametre::tarifJournalier() * $quantite,
+                'quantite' => $quantite,
                 'mode' => $data['mode'],
                 'reference' => $data['reference'] ?? null,
             ]);
 
             $this->numeroter($paiement);
-            $this->pointage->parCaisse($paiement, $caissier);
+            // Une entrée par personne ; seule la première est rattachée au client identifié
+            for ($i = 0; $i < $quantite; $i++) {
+                $this->pointage->parCaisse($paiement, $caissier, $i === 0);
+            }
 
             return $paiement;
         });

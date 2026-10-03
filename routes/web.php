@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\MotDePasseController;
 use App\Http\Controllers\CaisseController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\JourneeController;
 use App\Http\Controllers\RecuController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,7 +26,7 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
     Route::put('/mot-de-passe', [MotDePasseController::class, 'update'])->middleware('throttle:10,1')->name('mot-de-passe.update');
 
     Route::get('/', fn () => redirect()->route(
-        auth()->user()->isAdmin() ? 'dashboard' : 'caisse.index'
+        auth()->user()->isAdmin() ? 'dashboard' : 'journee'
     ));
 
     // --- Responsable (admin) uniquement ---
@@ -57,6 +58,7 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
 
     // --- Caissière et responsable ---
     Route::middleware('role:admin,caissier')->group(function () {
+        Route::get('/ma-journee', JourneeController::class)->name('journee');
         Route::get('/caisse', [CaisseController::class, 'index'])->name('caisse.index');
         Route::post('/caisse/journalier', [CaisseController::class, 'journalier'])->middleware('throttle:30,1')->name('caisse.journalier');
         Route::post('/caisse/abonnement', [CaisseController::class, 'abonnement'])->middleware('throttle:30,1')->name('caisse.abonnement');

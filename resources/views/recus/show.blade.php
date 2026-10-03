@@ -56,7 +56,7 @@
         <tr><td>Ticket</td><td class="gras">{{ $paiement->numero_recu }}</td></tr>
         <tr><td>Date</td><td>{{ $paiement->created_at->format('d/m/Y H:i') }}</td></tr>
         <tr><td>Client</td><td>{{ $paiement->client?->nom_complet ?? 'Client journalier' }}</td></tr>
-        <tr><td>Objet</td><td>{{ $paiement->abonnement ? 'Abonnement '.$paiement->abonnement->formule->nom : 'Entrée journalière' }}</td></tr>
+        <tr><td>Objet</td><td>{{ $paiement->abonnement ? 'Abonnement '.$paiement->abonnement->formule->nom : 'Entrée journalière'.($paiement->quantite > 1 ? ' × '.$paiement->quantite : '') }}</td></tr>
         @if($paiement->abonnement)
             <tr><td>Validité</td><td>{{ $paiement->abonnement->date_debut->format('d/m/Y') }} au {{ $paiement->abonnement->date_fin->format('d/m/Y') }}</td></tr>
         @else

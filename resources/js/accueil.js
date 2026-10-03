@@ -1,7 +1,7 @@
-// Écran d'accueil (kiosque) : affiche le client qui vient de badger.
+// Écran d'accueil (kiosque) : affiche le client qui vient de pointer.
 // Deux sources :
-//   1. un lecteur de badge USB branché sur ce poste (il "tape" le numéro puis Entrée) ;
-//   2. un boîtier en réseau qui appelle l'API : l'écran interroge régulièrement le dernier passage.
+//   1. secours : la caissière tape le n° du membre puis Entrée sur ce poste ;
+//   2. la pointeuse en réseau envoie chaque passage : l'écran interroge le dernier passage.
 
 const racine = document.querySelector('[data-accueil]');
 const URL_DERNIER = racine.dataset.urlDernier;
@@ -97,12 +97,12 @@ async function interroger() {
     }
 }
 
-// --- Lecteur de badge USB (émulation clavier) ---
-// Les caractères arrivent très vite (< 50 ms d'écart) puis Entrée.
+// --- Saisie du n° au clavier (secours si la pointeuse est en panne) ---
+// Le n° est tapé puis validé par Entrée.
 let tampon = '';
 let dernierCaractere = 0;
 
-async function envoyerBadge(badge) {
+async function envoyerNumero(numero) {
     try {
         const reponse = await fetch(URL_SCAN, {
             method: 'POST',
@@ -113,11 +113,11 @@ async function envoyerBadge(badge) {
                 'X-Requested-With': 'XMLHttpRequest',
             },
             credentials: 'same-origin',
-            body: JSON.stringify({ empreinte_id: badge }),
+            body: JSON.stringify({ empreinte_id: numero }),
         });
         if (reponse.status === 401 || reponse.status === 419) { window.location.reload(); return; }
         if (reponse.status === 422) {
-            afficher({ autorise: false, message: 'Badge illisible, réessayez', client: null });
+            afficher({ autorise: false, message: 'N° invalide, réessayez', client: null });
             return;
         }
         if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`);
@@ -125,20 +125,20 @@ async function envoyerBadge(badge) {
         dernierId = passage.id;
         afficher(passage);
     } catch (erreur) {
-        console.error('Badge : envoi impossible', erreur);
+        console.error('Envoi impossible', erreur);
         el('hors-ligne').classList.remove('hidden');
     }
 }
 
 document.addEventListener('keydown', (e) => {
     const maintenant = Date.now();
-    if (maintenant - dernierCaractere > 100) tampon = ''; // frappe humaine lente : on repart à zéro
+    if (maintenant - dernierCaractere > 3000) tampon = ''; // saisie abandonnée : on repart à zéro
     dernierCaractere = maintenant;
 
     if (e.key === 'Enter') {
-        const badge = tampon.trim();
+        const numero = tampon.trim();
         tampon = '';
-        if (/^[0-9]{1,9}$/.test(badge)) envoyerBadge(badge);
+        if (/^[0-9]{1,9}$/.test(numero)) envoyerNumero(numero);
         e.preventDefault();
         return;
     }

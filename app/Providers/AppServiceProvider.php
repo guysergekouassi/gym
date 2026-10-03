@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Services\KpiService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -18,6 +20,13 @@ class AppServiceProvider extends ServiceProvider
     {
         // Mots de passe : 10 caractères minimum, majuscules, minuscules et chiffres
         Password::defaults(fn () => Password::min(10)->letters()->mixedCase()->numbers());
+
+        // Cloche de la barre du haut : abonnements qui expirent bientôt
+        View::composer('layouts.app', function ($view) {
+            if (auth()->check()) {
+                $view->with('alertes', app(KpiService::class)->expirantBientot());
+            }
+        });
 
         if ($this->app->isProduction()) {
             // Interdit migrate:fresh / db:wipe sur la base de production

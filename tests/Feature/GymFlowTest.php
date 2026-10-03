@@ -52,8 +52,8 @@ class GymFlowTest extends TestCase
         $this->post('/logout');
 
         $this->post('/login', ['email' => 'caisse@gymflow.local', 'password' => 'ChangeMoi!2026'])
-            ->assertRedirect(route('caisse.index'));
-        $this->get('/')->assertRedirect(route('caisse.index'));
+            ->assertRedirect(route('journee'));
+        $this->get('/')->assertRedirect(route('journee'));
 
         $this->post('/logout');
         $this->post('/login', ['email' => 'admin@gymflow.local', 'password' => 'mauvais'])->assertSessionHasErrors('email');
@@ -76,7 +76,7 @@ class GymFlowTest extends TestCase
         ]);
         $paiement = Paiement::firstOrFail();
 
-        foreach (['/dashboard', '/caisse', '/caisse?onglet=abonnement', '/clients', '/clients?statut=expire&q=50%_', '/clients/create',
+        foreach (['/dashboard', '/ma-journee', '/caisse', '/caisse?onglet=renouvellement', '/clients?nouveau=1', '/clients?statut=expire_bientot', '/caisse?onglet=abonnement', '/clients', '/clients?statut=expire&q=50%_', '/clients/create',
             "/clients/{$client->id}", "/clients/{$client->id}/edit", '/accueil', '/accueil/dernier',
             "/recus/{$paiement->numero_recu}", '/mot-de-passe', '/admin/paiements', '/admin/formules',
             '/admin/utilisateurs', '/admin/utilisateurs/create', "/admin/utilisateurs/{$this->caissiere->id}/edit",

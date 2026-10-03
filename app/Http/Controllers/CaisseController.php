@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Abonnement;
 use App\Models\Client;
 use App\Models\Formule;
 use App\Models\Paiement;
@@ -43,7 +44,9 @@ class CaisseController extends Controller
             'totalJour' => $valides->sum('montant'),
             'nombreJour' => $valides->count(),
             'parMode' => $valides->groupBy('mode')->map->sum('montant')->sortDesc(),
-            'onglet' => $request->query('onglet') === 'abonnement' || $request->integer('client_id') ? 'abonnement' : 'passage',
+            'onglet' => $request->integer('client_id') ? 'abonnement'
+                : (in_array($request->query('onglet'), ['abonnement', 'renouvellement'], true) ? $request->query('onglet') : 'passage'),
+            'aRenouveler' => $this->aRenouveler(),
             'clientPreselectionne' => $request->integer('client_id')
                 ? Client::find($request->integer('client_id'))
                 : null,
@@ -56,6 +59,7 @@ class CaisseController extends Controller
             'client_id' => ['nullable', 'integer', Rule::exists('clients', 'id')->whereNull('deleted_at')],
             'nom' => ['nullable', 'string', 'max:100'],
             'telephone' => ['nullable', 'string', 'regex:/^[0-9+() .-]{6,20}$/'],
+            'quantite' => ['nullable', 'integer', 'min:1', 'max:10'],
             'mode' => ['required', Rule::in(array_keys(Paiement::MODES))],
             'reference' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._\/-]*$/'],
         ]);
@@ -84,6 +88,24 @@ class CaisseController extends Controller
         );
 
         return $this->apresPaiement($paiement, 'Abonnement enregistré.');
+    }
+
+    /**
+     * Abonnés dont la fin approche (7 jours) ou est passée depuis moins de 30 jours,
+     * et qui n'ont pas déjà prolongé : la liste de l'onglet « Renouvellement ».
+     */
+    private function aRenouveler()
+    {
+        $finParClient = Abonnement::where('statut', Abonnement::STATUT_ACTIF)
+            ->selectRaw('client_id, MAX(date_fin) as fin')
+            ->groupBy('client_id');
+
+        return Client::abonnes()
+            ->joinSub($finParClient, 'droits', 'droits.client_id', '=', 'clients.id')
+            ->whereBetween('droits.fin', [today()->subDays(30)->toDateString(), today()->addDays(7)->toDateString()])
+            ->orderBy('droits.fin')
+            ->limit(30)
+            ->get(['clients.*', 'droits.fin']);
     }
 
     /** Recherche de clients pour les formulaires de caisse. */
