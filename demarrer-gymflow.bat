@@ -1,13 +1,20 @@
 @echo off
-title GymFlow - ne pas fermer cette fenetre
+title GymFlow
 cd /d "%~dp0"
-echo.
-echo  GymFlow demarre. Laissez les deux fenetres noires ouvertes toute la journee.
-echo.
+
+where php >nul 2>&1 || (echo PHP est introuvable sur ce PC. Voir docs\DEPLOIEMENT.md & pause & exit /b 1)
+
+rem Deja lance ? On ouvre simplement le navigateur.
+netstat -ano | findstr ":8005 " | findstr LISTENING >nul && (start "" "http://127.0.0.1:8005" & exit /b 0)
+
+echo GymFlow demarre...
 php artisan optimize:clear >nul
-rem Liaison avec la pointeuse : fenetre separee
-start "GymFlow - Pointeuse" cmd /k php artisan pointeuse:ecouter
+php artisan salle:sauvegarder
+
+rem Deux fenetres reduites, relancees automatiquement si elles s arretent
+start "GymFlow - Application (ne pas fermer)" /min cmd /c "%~dp0outils\boucle-serveur.bat"
+start "GymFlow - Pointeuse (ne pas fermer)" /min cmd /c "%~dp0outils\boucle-pointeuse.bat"
+
+timeout /t 4 /nobreak >nul
 start "" "http://127.0.0.1:8005"
-rem Application accessible uniquement depuis ce PC (127.0.0.1) : rien n est ouvert sur le reseau
-php artisan serve --host=127.0.0.1 --port=8005
-pause
+exit /b 0
