@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use App\Models\Passage;
+use App\Services\PointageService;
+use App\Support\Badge;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-/** Écran affiché à l'entrée : montre la fiche du client qui vient de scanner. */
+/** Écran affiché à l'entrée : montre la fiche du client qui vient de badger. */
 class AccueilController extends Controller
 {
     public function index(): View
@@ -19,14 +22,31 @@ class AccueilController extends Controller
     {
         $passage = Passage::with('client')->latest('passe_le')->latest('id')->first();
 
-        if (! $passage) {
-            return response()->json(null);
-        }
+        return response()->json($passage ? $this->presenter($passage) : null);
+    }
 
+    /**
+     * Lecteur de badge USB branché sur le poste d'accueil : il "tape" le numéro
+     * du badge suivi d'Entrée, capté par l'écran d'accueil puis envoyé ici.
+     */
+    public function scan(Request $request, PointageService $pointage): JsonResponse
+    {
+        $data = $request->validate([
+            'badge_id' => ['required', 'string', Badge::REGLE],
+        ]);
+
+        $passage = $pointage->parBadge($data['badge_id'], null, $request->user());
+        $passage->load('client');
+
+        return response()->json($this->presenter($passage));
+    }
+
+    private function presenter(Passage $passage): array
+    {
         $client = $passage->client;
         $finDroits = $client?->finDesDroits();
 
-        return response()->json([
+        return [
             'id' => $passage->id,
             'autorise' => $passage->estAutorise(),
             'message' => $passage->message(),
@@ -35,11 +55,12 @@ class AccueilController extends Controller
             'il_y_a_secondes' => (int) abs(now()->diffInSeconds($passage->passe_le)),
             'client' => $client ? [
                 'nom' => $client->nom_complet,
+                'initiale' => mb_strtoupper(mb_substr($client->nom, 0, 1)),
                 'type' => Client::TYPES[$client->type] ?? $client->type,
                 'photo_url' => $client->photo_url,
             ] : null,
             'fin_droits' => $finDroits?->format('d/m/Y'),
             'jours_restants' => $finDroits ? max(0, (int) today()->diffInDays($finDroits, false)) : null,
-        ]);
+        ];
     }
 }
