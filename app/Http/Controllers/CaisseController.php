@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\Formule;
 use App\Models\Paiement;
+use App\Models\Parametre;
 use App\Services\CaisseService;
 use App\Services\RecuService;
+use App\Support\Recherche;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,16 +27,23 @@ class CaisseController extends Controller
     {
         $user = $request->user();
 
-        $paiementsJour = Paiement::with(['client', 'abonnement.formule'])
+        // La caissière ne voit que ses propres encaissements ; l'admin voit tout
+        $paiementsJour = Paiement::with(['client', 'abonnement.formule', 'user:id,name'])
             ->whereDate('created_at', today()->toDateString())
             ->when(! $user->isAdmin(), fn ($q) => $q->where('user_id', $user->id))
-            ->latest()
+            ->latest('id')
             ->get();
+
+        $valides = $paiementsJour->reject->estAnnule();
 
         return view('caisse.index', [
             'formules' => Formule::where('actif', true)->orderBy('duree_jours')->get(),
-            'paiements' => $paiementsJour->take(15),
-            'totalJour' => $paiementsJour->sum('montant'),
+            'tarifJournalier' => Parametre::tarifJournalier(),
+            'paiements' => $paiementsJour->take(20),
+            'totalJour' => $valides->sum('montant'),
+            'nombreJour' => $valides->count(),
+            'parMode' => $valides->groupBy('mode')->map->sum('montant')->sortDesc(),
+            'onglet' => $request->query('onglet') === 'abonnement' || $request->integer('client_id') ? 'abonnement' : 'passage',
             'clientPreselectionne' => $request->integer('client_id')
                 ? Client::find($request->integer('client_id'))
                 : null,
@@ -44,12 +53,11 @@ class CaisseController extends Controller
     public function journalier(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'client_id' => ['nullable', 'integer', 'exists:clients,id'],
+            'client_id' => ['nullable', 'integer', Rule::exists('clients', 'id')->whereNull('deleted_at')],
             'nom' => ['nullable', 'string', 'max:100'],
-            'telephone' => ['nullable', 'string', 'max:20'],
-            'montant' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'telephone' => ['nullable', 'string', 'regex:/^[0-9+() .-]{6,20}$/'],
             'mode' => ['required', Rule::in(array_keys(Paiement::MODES))],
-            'reference' => ['nullable', 'string', 'max:100'],
+            'reference' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._\/-]*$/'],
         ]);
 
         $paiement = $this->caisse->encaisserJournalier($data, $request->user());
@@ -60,10 +68,12 @@ class CaisseController extends Controller
     public function abonnement(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'client_id' => ['required', 'integer', 'exists:clients,id'],
+            'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->whereNull('deleted_at')],
             'formule_id' => ['required', 'integer', Rule::exists('formules', 'id')->where('actif', true)],
             'mode' => ['required', Rule::in(array_keys(Paiement::MODES))],
-            'reference' => ['nullable', 'string', 'max:100'],
+            'reference' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._\/-]*$/'],
+        ], [
+            'client_id.required' => 'Choisissez le client à abonner (recherche par nom ou téléphone).',
         ]);
 
         $paiement = $this->caisse->souscrireAbonnement(
@@ -86,9 +96,7 @@ class CaisseController extends Controller
         }
 
         $clients = Client::query()
-            ->where(fn ($w) => $w->where('nom', 'like', "%{$q}%")
-                ->orWhere('prenoms', 'like', "%{$q}%")
-                ->orWhere('telephone', 'like', "%{$q}%"))
+            ->tap(fn ($query) => Recherche::appliquer($query, $q, ['nom', 'prenoms', 'telephone', 'badge_id']))
             ->orderBy('nom')
             ->limit(10)
             ->get();
@@ -110,8 +118,9 @@ class CaisseController extends Controller
             } catch (Throwable $e) {
                 report($e);
 
+                // Le détail technique reste dans les logs, pas à l'écran
                 return redirect()->route('recus.show', ['paiement' => $paiement, 'imprimer' => 1])
-                    ->with('erreur', "Paiement enregistré mais l'impression a échoué : {$e->getMessage()}");
+                    ->with('erreur', "Paiement enregistré, mais l'imprimante ne répond pas. Imprimez le reçu depuis cette page.");
             }
 
             return redirect()->route('caisse.index')

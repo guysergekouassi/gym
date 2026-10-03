@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -31,7 +32,26 @@ class Paiement extends Model
 
     protected function casts(): array
     {
-        return ['montant' => 'integer'];
+        return [
+            'montant' => 'integer',
+            'annule_le' => 'datetime',
+        ];
+    }
+
+    /** Encaissements non annulés : seuls ceux-là comptent dans la recette. */
+    public function scopeValides(Builder $query): void
+    {
+        $query->whereNull('annule_le');
+    }
+
+    public function estAnnule(): bool
+    {
+        return $this->annule_le !== null;
+    }
+
+    public function annulePar(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'annule_par');
     }
 
     public function client(): BelongsTo

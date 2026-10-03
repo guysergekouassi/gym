@@ -17,7 +17,7 @@ class KpiService
         $jour = today()->toDateString();
 
         $passages = Passage::whereDate('passe_le', $jour)->get(['statut', 'passe_le']);
-        $paiements = Paiement::with('user:id,name')->whereDate('created_at', $jour)->get();
+        $paiements = Paiement::with('user:id,name')->valides()->whereDate('created_at', $jour)->get();
 
         $affluence = array_fill(0, 24, 0);
         foreach ($passages->where('statut', Passage::STATUT_AUTORISE) as $passage) {
@@ -34,6 +34,7 @@ class KpiService
                 'nombre' => $groupe->count(),
                 'total' => $groupe->sum('montant'),
             ])->values(),
+            'recette_par_mode' => $paiements->groupBy('mode')->map->sum('montant')->sortDesc(),
             'affluence' => $affluence,
         ];
     }
