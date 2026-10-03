@@ -47,6 +47,9 @@ class RecuService
             if (config('salle.telephone')) {
                 $imprimante->text('Tel : '.$t(config('salle.telephone'))."\n");
             }
+            if (config('salle.email')) {
+                $imprimante->text($t(config('salle.email'))."\n");
+            }
             $imprimante->text(str_repeat('-', 42)."\n");
 
             $imprimante->setJustification(Printer::JUSTIFY_LEFT);
@@ -75,7 +78,7 @@ class RecuService
             $imprimante->text($t(Fcfa::format($paiement->montant))."\n");
             $imprimante->setTextSize(1, 1);
             $imprimante->text('Caisse : '.$t($paiement->user?->name)."\n\n");
-            $imprimante->text("Merci et bonne seance !\n");
+            $imprimante->text($t(config('salle.message_recu') ?: 'Merci et bonne seance !')."\n");
             $imprimante->feed(3);
             $imprimante->cut();
         } finally {

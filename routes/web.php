@@ -4,6 +4,7 @@ use App\Http\Controllers\AccueilController;
 use App\Http\Controllers\Admin\FormuleController;
 use App\Http\Controllers\Admin\PointeuseController;
 use App\Http\Controllers\Admin\PaiementController;
+use App\Http\Controllers\Admin\ParametreController;
 use App\Http\Controllers\Admin\UtilisateurController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\MotDePasseController;
@@ -47,6 +48,9 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
             Route::resource('utilisateurs', UtilisateurController::class)
                 ->parameters(['utilisateurs' => 'utilisateur'])
                 ->except(['show', 'destroy']);
+
+            Route::get('/parametres', [ParametreController::class, 'edit'])->name('parametres.edit');
+            Route::put('/parametres', [ParametreController::class, 'update'])->name('parametres.update');
 
             Route::get('/pointeuses', [PointeuseController::class, 'index'])->name('pointeuses.index');
             Route::post('/pointeuses', [PointeuseController::class, 'store'])->name('pointeuses.store');

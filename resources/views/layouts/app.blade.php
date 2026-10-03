@@ -42,6 +42,7 @@
                 <a href="{{ route('admin.formules.index') }}" class="{{ $actif('admin.formules.*') }}"><x-icon name="tag"/> Formules &amp; tarifs</a>
                 <a href="{{ route('admin.utilisateurs.index') }}" class="{{ $actif('admin.utilisateurs.*') }}"><x-icon name="shield"/> Utilisateurs</a>
                 <a href="{{ route('admin.pointeuses.index') }}" class="{{ $actif('admin.pointeuses.*') }}"><x-icon name="fingerprint"/> Pointeuses</a>
+                <a href="{{ route('admin.parametres.edit') }}" class="{{ $actif('admin.parametres.*') }}"><x-icon name="settings"/> Paramètres</a>
             @endif
         </nav>
 

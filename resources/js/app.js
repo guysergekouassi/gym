@@ -244,3 +244,10 @@ $$('[data-remplir-garder]').forEach((bouton) => {
         if (champ) champ.value = bouton.dataset.valeur;
     });
 });
+
+// --- Paramètres : aperçu du ticket en direct ---
+$$('[data-apercu]').forEach((champ) => {
+    champ.addEventListener('input', () => {
+        $$(`[data-apercu-cible="${champ.dataset.apercu}"]`).forEach((el) => { el.textContent = champ.value; });
+    });
+});
