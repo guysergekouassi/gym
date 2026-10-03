@@ -25,7 +25,7 @@ class ClientController extends Controller
         $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
             'type' => ['nullable', Rule::in(array_keys(Client::TYPES))],
-            'statut' => ['nullable', Rule::in(['en_regle', 'expire', 'expire_bientot'])],
+            'statut' => ['nullable', Rule::in(['en_regle', 'expire', 'expire_bientot', 'a_relancer'])],
         ]);
 
         $jour = today()->toDateString();
@@ -51,6 +51,9 @@ class ClientController extends Controller
             ->when($request->query('statut') === 'expire', fn ($q) => $q->abonnes()->whereDoesntHave('abonnements', $enRegle))
             ->when($request->query('statut') === 'expire_bientot', fn ($q) => $q->whereIn(
                 'id', app(KpiService::class)->expirantBientot()->pluck('client_id')
+            ))
+            ->when($request->query('statut') === 'a_relancer', fn ($q) => $q->whereIn(
+                'id', app(KpiService::class)->abonnesMoinsActifs()->pluck('id')
             ))
             ->withMax(['passages as dernier_passage_le' => fn ($q) => $q->where('statut', Passage::STATUT_AUTORISE)], 'passe_le')
             ->withMax(['abonnements as fin_droits' => fn ($q) => $q->where('statut', Abonnement::STATUT_ACTIF)], 'date_fin')

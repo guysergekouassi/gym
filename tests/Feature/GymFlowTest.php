@@ -9,6 +9,7 @@ use App\Models\Lecteur;
 use App\Models\Paiement;
 use App\Models\Passage;
 use App\Models\User;
+use App\Services\KpiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -181,10 +182,17 @@ class GymFlowTest extends TestCase
 
         $this->scanner('1');
 
+        $kpi = app(KpiService::class);
+        $this->assertSame(['Assidu'], $kpi->abonnesActifs()->pluck('nom')->all());
+        $this->assertSame(['Absent', 'Fidèle'], $kpi->abonnesMoinsActifs()->pluck('nom')->sort()->values()->all());
+        $renouvellement = $kpi->renouvellement(today()->subDays(30), today());
+        $this->assertSame(1, $renouvellement['renouveles']);
+        $this->assertSame(100.0, $renouvellement['taux']);
+        $this->assertSame(3, $kpi->nombreAbonnementsEnCours());
+
         $this->actingAs($this->admin)->get('/dashboard')->assertOk()
-            ->assertViewHas('actifs', fn ($c) => $c->pluck('nom')->all() === ['Assidu'])
-            ->assertViewHas('moinsActifs', fn ($c) => $c->pluck('nom')->sort()->values()->all() === ['Absent', 'Fidèle'])
-            ->assertViewHas('renouvellement', fn ($r) => $r['renouveles'] === 1 && $r['taux'] === 100.0)
-            ->assertViewHas('abonnementsEnCours', 3);
+            ->assertViewHas('chiffres', fn ($c) => $c['abonnements_actifs'] === 3);
+        $this->get('/clients?statut=a_relancer')->assertOk()
+            ->assertViewHas('clients', fn ($c) => collect($c->items())->pluck('nom')->sort()->values()->all() === ['Absent', 'Fidèle']);
     }
 }

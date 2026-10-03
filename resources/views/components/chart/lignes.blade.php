@@ -1,10 +1,10 @@
-@props(['etiquettes', 'series', 'titre' => 'Graphique'])
+@props(['etiquettes', 'series', 'titre' => 'Graphique', 'hauteur' => 240])
 {{--
     Courbes (SVG, sans librairie). $series = [['nom' => …, 'couleur' => '#…', 'valeurs' => [...]], …]
     Survol : infobulle native sur chaque point. Une table équivalente est fournie aux lecteurs d'écran.
 --}}
 @php
-    $L = 640; $H = 240; $g = 48; $d = 16; $h = 14; $b = 30;
+    $L = 640; $H = (int) $hauteur; $g = 48; $d = 16; $h = 14; $b = 30;
     $max = max(1, ...array_merge(...array_map(fn ($s) => $s['valeurs'], $series)));
     $pas = 10 ** floor(log10($max));
     foreach ([1, 2, 2.5, 5, 10] as $m) { if ($m * $pas * 4 >= $max) { $echelle = $m * $pas * 4; break; } }
@@ -20,7 +20,9 @@
             <line x1="{{ $g }}" x2="{{ $L - $d }}" y1="{{ $y($v) }}" y2="{{ $y($v) }}" stroke="#e8edf3" stroke-width="1"/>
             <text x="{{ $g - 8 }}" y="{{ $y($v) + 4 }}" text-anchor="end" font-size="11" fill="#64748b">{{ $court($v) }}</text>
         @endfor
+        @php $pasEtiquettes = max(1, (int) ceil($n / 12)); @endphp
         @foreach($etiquettes as $i => $etiquette)
+            @continue($i % $pasEtiquettes !== 0 && $i !== $n - 1)
             <text x="{{ $x($i) }}" y="{{ $H - 8 }}" text-anchor="middle" font-size="11" fill="#64748b">{{ $etiquette }}</text>
         @endforeach
         @foreach($series as $s)

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Paiement;
 use App\Models\User;
 use App\Services\CaisseService;
+use App\Support\Exercices;
+use App\Support\Periode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,6 +38,7 @@ class PaiementController extends Controller
             'parCaissier' => (clone $valides)->selectRaw('user_id, SUM(montant) as total, COUNT(*) as nombre')
                 ->groupBy('user_id')->with('user:id,name')->get(),
             'caissiers' => User::orderBy('name')->get(['id', 'name']),
+            'annees' => Exercices::disponibles(),
         ]);
     }
 
@@ -105,16 +108,17 @@ class PaiementController extends Controller
     private function filtres(Request $request): array
     {
         $request->validate([
-            'du' => ['nullable', 'date'],
-            'au' => ['nullable', 'date', 'after_or_equal:du'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'mode' => ['nullable', Rule::in(array_keys(Paiement::MODES))],
             'type' => ['nullable', Rule::in(array_keys(Paiement::TYPES))],
         ]);
 
+        $periode = Periode::depuisRequete($request);
+
         return [
-            'du' => $request->date('du') ?? today(),
-            'au' => $request->date('au') ?? today(),
+            'periode' => $periode,
+            'du' => $periode->du,
+            'au' => $periode->au,
             'user_id' => $request->integer('user_id') ?: null,
             'mode' => $request->query('mode'),
             'type' => $request->query('type'),

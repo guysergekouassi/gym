@@ -11,9 +11,11 @@
     <a href="{{ route('admin.paiements.export', request()->query()) }}" class="btn-light"><x-icon name="download" class="size-4"/> Export Excel (CSV)</a>
 </x-page-header>
 
-<form method="GET" class="card mb-6 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6 lg:items-end">
-    <div><label class="label text-xs" for="du">Du</label><input id="du" type="date" name="du" value="{{ $filtres['du']->toDateString() }}" class="input"></div>
-    <div><label class="label text-xs" for="au">Au</label><input id="au" type="date" name="au" value="{{ $filtres['au']->toDateString() }}" class="input"></div>
+<x-filtre-periode :periode="$filtres['periode']" :annees="$annees" class="mb-4"
+    :conserver="['user_id' => $filtres['user_id'], 'mode' => $filtres['mode'], 'type' => $filtres['type']]"/>
+
+<form method="GET" class="card mb-6 flex flex-wrap items-end gap-3 p-4">
+    @foreach($filtres['periode']->parametres() as $nom => $valeur)<input type="hidden" name="{{ $nom }}" value="{{ $valeur }}">@endforeach
     <div>
         <label class="label text-xs" for="user_id">Caissière</label>
         <select id="user_id" name="user_id" class="input">
