@@ -24,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->append(EnTetesSecurite::class);
 
+        // Préférence d'affichage seulement (« menu » = ferme / ouvert), lue en clair
+        $middleware->encryptCookies(except: ['menu']);
+
         $middleware->redirectGuestsTo('/login');
         $middleware->redirectUsersTo('/');
     })
