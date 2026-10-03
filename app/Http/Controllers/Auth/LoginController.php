@@ -60,7 +60,7 @@ class LoginController extends Controller
             return redirect()->route('mot-de-passe.edit');
         }
 
-        return redirect()->intended($user->isAdmin() ? route('dashboard') : route('caisse.index'));
+        return redirect()->intended($user->isAdmin() ? route('dashboard') : route('journee'));
     }
 
     public function destroy(Request $request): RedirectResponse

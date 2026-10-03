@@ -1,6 +1,9 @@
-@props(['class' => 'size-10'])
-<span {{ $attributes->merge(['class' => "$class inline-flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-lg shadow-brand-500/30"]) }}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" class="size-3/5" aria-hidden="true">
-        <path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>
-    </svg>
-</span>
+@props(['class' => 'h-9 w-9'])
+{{-- Haltère vert (logo des maquettes) --}}
+<svg viewBox="0 0 24 24" aria-hidden="true" {{ $attributes->merge(['class' => "$class shrink-0"]) }}>
+    <rect x="1.5" y="6" width="3" height="12" rx="1.2" fill="#2db679"/>
+    <rect x="5.5" y="3" width="3.6" height="18" rx="1.4" fill="#16a36a"/>
+    <rect x="9" y="10.4" width="6" height="3.2" rx="1" fill="#2db679"/>
+    <rect x="14.9" y="3" width="3.6" height="18" rx="1.4" fill="#16a36a"/>
+    <rect x="19.5" y="6" width="3" height="12" rx="1.2" fill="#2db679"/>
+</svg>

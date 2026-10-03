@@ -75,10 +75,10 @@ class PointageService
     }
 
     /** Passage validé par la caissière après encaissement d'un journalier. */
-    public function parCaisse(Paiement $paiement, User $caissier): Passage
+    public function parCaisse(Paiement $paiement, User $caissier, bool $avecClient = true): Passage
     {
         return $this->enregistrer([
-            'client_id' => $paiement->client_id,
+            'client_id' => $avecClient ? $paiement->client_id : null,
             'user_id' => $caissier->id,
             'paiement_id' => $paiement->id,
             'methode' => Passage::METHODE_CAISSE,

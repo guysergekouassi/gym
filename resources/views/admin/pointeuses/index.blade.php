@@ -63,11 +63,11 @@
             <ol class="list-decimal space-y-1.5 pl-5">
                 <li>Menu (<b>M/OK</b>) → <b>Comm.</b> → <b>Ethernet</b> : IP fixe, par ex. <code>192.168.1.201</code>, même passerelle que le PC.</li>
                 <li>Menu → <b>Comm.</b> → <b>Paramètre serveur Cloud</b> (ou ADMS) :
-                    adresse du serveur <code class="font-bold">{{ $adresseServeur }}</code>, port <code class="font-bold">{{ $portServeur }}</code>, nom de domaine : <b>Non</b>, proxy : <b>Non</b>.</li>
+                    adresse du serveur <code class="font-bold">{{ $adresseServeur ?? 'IP du PC (commande ipconfig)' }}</code>, port <code class="font-bold">{{ $portServeur }}</code>, nom de domaine : <b>Non</b>, proxy : <b>Non</b>.</li>
                 <li>Redémarrer la pointeuse. Ici, l'état passe à <span class="pill-green">En ligne</span> en moins d'une minute.</li>
                 <li>Cliquez « Envoyer tous les membres », puis enregistrez le doigt de chaque membre sur la pointeuse (Menu → Utilisateurs → son n° → Empreinte).</li>
             </ol>
-            <p class="mt-3 text-xs text-slate-500">L'adresse ci-dessus doit être l'IP locale du PC qui fait tourner l'application (ex. 192.168.1.10), pas « localhost ».</p>
+            <p class="mt-3 text-xs text-slate-500">L'application doit être lancée pour le réseau local : <code>php artisan serve --host=0.0.0.0 --port={{ $portServeur }}</code>, et le pare-feu Windows doit autoriser ce port. Voir le guide d'installation.</p>
         </div>
     </div>
 

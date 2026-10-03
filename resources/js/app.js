@@ -56,23 +56,35 @@ $$('[data-dialog-open]').forEach((bouton) => {
 });
 $$('[data-dialog-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog')?.close()));
 
-// --- Onglets de la caisse ---
+// --- Onglets (caisse) : l'état visuel suit aria-selected ---
 $$('[data-tabs]').forEach((groupe) => {
     const boutons = $$('[data-tab]', groupe);
     const panneaux = $$('[data-panel]', groupe);
     const activer = (nom) => {
-        boutons.forEach((b) => {
-            const actif = b.dataset.tab === nom;
-            b.setAttribute('aria-selected', actif ? 'true' : 'false');
-            b.classList.toggle('bg-white', actif);
-            b.classList.toggle('shadow-sm', actif);
-            b.classList.toggle('text-slate-900', actif);
-            b.classList.toggle('text-slate-500', !actif);
-        });
+        boutons.forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === nom ? 'true' : 'false'));
         panneaux.forEach((p) => { p.hidden = p.dataset.panel !== nom; });
     };
     boutons.forEach((b) => b.addEventListener('click', () => activer(b.dataset.tab)));
+    $$('[data-tab-aller]', groupe).forEach((b) => b.addEventListener('click', () => activer(b.dataset.tabAller)));
     activer(groupe.dataset.tabs || boutons[0]?.dataset.tab);
+});
+
+// --- Caisse : quantité de tickets et total ---
+const fcfa = (n) => `${new Intl.NumberFormat('fr-FR').format(n).replace(/\u202f|\u00a0/g, ' ')} FCFA`;
+$$('[data-calcul-passage]').forEach((form) => {
+    const prix = Number(form.dataset.prix);
+    const champ = form.querySelector('[data-quantite]');
+    const maj = () => {
+        let q = Math.round(Number(champ.value) || 1);
+        q = Math.min(10, Math.max(1, q));
+        champ.value = q;
+        $$('[data-total], [data-total-court]', form).forEach((el) => { el.textContent = fcfa(prix * q); });
+        $$('[data-recap-quantite]', form).forEach((el) => { el.textContent = q; });
+    };
+    form.querySelector('[data-quantite-moins]')?.addEventListener('click', () => { champ.value = Number(champ.value) - 1; maj(); });
+    form.querySelector('[data-quantite-plus]')?.addEventListener('click', () => { champ.value = Number(champ.value) + 1; maj(); });
+    champ.addEventListener('change', maj);
+    maj();
 });
 
 // --- Recherche de client (caisse) ---
@@ -164,10 +176,11 @@ $$('[data-recherche-client]').forEach((bloc) => {
 
 // --- Récapitulatif dynamique de la formule choisie (caisse) ---
 $$('[data-recap-source]').forEach((form) => {
-    const cible = form.querySelector('[data-recap-montant]');
     const maj = () => {
         const choisie = form.querySelector('input[name="formule_id"]:checked');
-        if (cible && choisie) cible.textContent = choisie.dataset.prix;
+        if (!choisie) return;
+        $$('[data-recap-montant]', form).forEach((el) => { el.textContent = choisie.dataset.prix; });
+        $$('[data-recap-nom]', form).forEach((el) => { el.textContent = choisie.dataset.nom; });
     };
     form.addEventListener('change', maj);
     maj();
@@ -220,5 +233,14 @@ $$('[data-remplir]').forEach((bouton) => {
         const champ = document.getElementById(bouton.dataset.remplir);
         if (champ) champ.value = bouton.dataset.valeur;
         bouton.remove();
+    });
+});
+
+// --- Fenêtre ouverte d'office (ex. erreurs de saisie dans « Nouveau client ») ---
+$$('dialog[data-ouvrir]').forEach((d) => d.showModal());
+$$('[data-remplir-garder]').forEach((bouton) => {
+    bouton.addEventListener('click', () => {
+        const champ = document.getElementById(bouton.dataset.remplirGarder);
+        if (champ) champ.value = bouton.dataset.valeur;
     });
 });

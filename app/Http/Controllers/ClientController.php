@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Abonnement;
 use App\Models\Client;
 use App\Models\Passage;
+use App\Services\KpiService;
 use App\Services\SynchroPointeuseService;
 use App\Support\Empreinte;
 use App\Support\Recherche;
@@ -24,32 +25,47 @@ class ClientController extends Controller
         $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
             'type' => ['nullable', Rule::in(array_keys(Client::TYPES))],
-            'statut' => ['nullable', Rule::in(['en_regle', 'expire'])],
+            'statut' => ['nullable', Rule::in(['en_regle', 'expire', 'expire_bientot'])],
         ]);
 
         $jour = today()->toDateString();
-        $finDroits = fn ($q) => $q->where('statut', Abonnement::STATUT_ACTIF);
         $enRegle = fn ($q) => $q->where('statut', Abonnement::STATUT_ACTIF)->whereDate('date_fin', '>=', $jour);
 
+        // Formule de l'abonnement le plus récent (affichée dans la liste)
+        $formuleActuelle = Abonnement::query()
+            ->join('formules', 'formules.id', '=', 'abonnements.formule_id')
+            ->whereColumn('abonnements.client_id', 'clients.id')
+            ->where('abonnements.statut', Abonnement::STATUT_ACTIF)
+            ->orderByDesc('abonnements.date_fin')
+            ->limit(1)
+            ->select('formules.nom');
+
         $clients = Client::query()
+            ->select('clients.*')
+            ->addSelect(['formule_actuelle' => $formuleActuelle])
             ->when($request->filled('q'), fn ($query) => Recherche::appliquer(
                 $query, (string) $request->query('q'), ['nom', 'prenoms', 'telephone', 'empreinte_id']
             ))
             ->when($request->filled('type'), fn ($q) => $q->where('type', $request->query('type')))
             ->when($request->query('statut') === 'en_regle', fn ($q) => $q->whereHas('abonnements', $enRegle))
             ->when($request->query('statut') === 'expire', fn ($q) => $q->abonnes()->whereDoesntHave('abonnements', $enRegle))
+            ->when($request->query('statut') === 'expire_bientot', fn ($q) => $q->whereIn(
+                'id', app(KpiService::class)->expirantBientot()->pluck('client_id')
+            ))
             ->withMax(['passages as dernier_passage_le' => fn ($q) => $q->where('statut', Passage::STATUT_AUTORISE)], 'passe_le')
-            ->withMax(['abonnements as fin_droits' => $finDroits], 'date_fin')
+            ->withMax(['abonnements as fin_droits' => fn ($q) => $q->where('statut', Abonnement::STATUT_ACTIF)], 'date_fin')
             ->orderBy('nom')
             ->paginate(25)
             ->withQueryString();
 
         return view('clients.index', [
             'clients' => $clients,
-            'totaux' => [
+            'compteurs' => [
                 'tous' => Client::count(),
-                'en_regle' => Client::whereHas('abonnements', $enRegle)->count(),
+                Client::TYPE_ABONNE => Client::abonnes()->count(),
+                Client::TYPE_JOURNALIER => Client::journaliers()->count(),
             ],
+            'numeroSuggere' => Empreinte::prochainNumero(),
         ]);
     }
 
@@ -72,7 +88,7 @@ class ClientController extends Controller
         $client = Client::create($data);
         $this->pointeuse->ajouterOuModifier($client);
 
-        if ($request->input('apres') === 'abonner') {
+        if ($request->boolean('abonner') || $request->input('apres') === 'abonner') {
             return redirect()->route('caisse.index', ['client_id' => $client->id])
                 ->with('succes', 'Client enregistré. Choisissez maintenant sa formule.');
         }
