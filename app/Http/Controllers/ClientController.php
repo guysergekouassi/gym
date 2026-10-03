@@ -25,7 +25,7 @@ class ClientController extends Controller
         $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
             'type' => ['nullable', Rule::in(array_keys(Client::TYPES))],
-            'statut' => ['nullable', Rule::in(['en_regle', 'expire', 'expire_bientot'])],
+            'statut' => ['nullable', Rule::in(['en_regle', 'expire', 'expire_bientot', 'a_relancer'])],
         ]);
 
         $jour = today()->toDateString();
@@ -51,6 +51,9 @@ class ClientController extends Controller
             ->when($request->query('statut') === 'expire', fn ($q) => $q->abonnes()->whereDoesntHave('abonnements', $enRegle))
             ->when($request->query('statut') === 'expire_bientot', fn ($q) => $q->whereIn(
                 'id', app(KpiService::class)->expirantBientot()->pluck('client_id')
+            ))
+            ->when($request->query('statut') === 'a_relancer', fn ($q) => $q->whereIn(
+                'id', app(KpiService::class)->abonnesMoinsActifs()->pluck('id')
             ))
             ->withMax(['passages as dernier_passage_le' => fn ($q) => $q->where('statut', Passage::STATUT_AUTORISE)], 'passe_le')
             ->withMax(['abonnements as fin_droits' => fn ($q) => $q->where('statut', Abonnement::STATUT_ACTIF)], 'date_fin')
@@ -85,6 +88,7 @@ class ClientController extends Controller
             $data['photo_path'] = $this->stockerPhoto($request->file('photo'));
         }
 
+        $data['date_adhesion'] ??= today(); // par défaut : inscrit aujourd'hui
         $client = Client::create($data);
         $this->pointeuse->ajouterOuModifier($client);
 
@@ -128,6 +132,7 @@ class ClientController extends Controller
             $data['photo_path'] = $this->stockerPhoto($request->file('photo'));
         }
 
+        $data['date_adhesion'] ??= $client->date_adhesion ?? today();
         $ancienNumero = $client->empreinte_id;
         $client->update($data);
 
@@ -168,7 +173,7 @@ class ClientController extends Controller
             'prenoms' => ['nullable', 'string', 'max:150'],
             'telephone' => ['nullable', 'string', 'regex:/^[0-9+() .-]{6,20}$/', Rule::unique('clients', 'telephone')->ignore($client?->id)],
             'email' => ['nullable', 'email', 'max:150'],
-            'date_naissance' => ['nullable', 'date', 'before:today', 'after:1900-01-01'],
+            'date_adhesion' => ['nullable', 'date', 'after:2000-01-01', 'before_or_equal:'.today()->addYear()->toDateString()],
             'sexe' => ['nullable', Rule::in(['M', 'F'])],
             'empreinte_id' => ['nullable', 'string', Empreinte::REGLE, Rule::unique('clients', 'empreinte_id')->ignore($client?->id)],
             'notes' => ['nullable', 'string', 'max:1000'],

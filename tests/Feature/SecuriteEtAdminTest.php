@@ -126,7 +126,7 @@ class SecuriteEtAdminTest extends TestCase
 
         // L'empreinte est refusée et la recette du jour exclut le ticket annulé
         $this->post('/accueil/scan', ['empreinte_id' => '42'])->assertJson(['autorise' => false]);
-        $this->get('/dashboard')->assertViewHas('jour', fn ($j) => $j['recette_abonnements'] === 0);
+        $this->get('/dashboard')->assertViewHas('chiffres', fn ($c) => $c['recette'] === 0);
 
         // Double annulation impossible
         $this->post("/admin/paiements/{$paiement->numero_recu}/annuler", ['motif' => 'Encore une fois'])
@@ -188,6 +188,20 @@ class SecuriteEtAdminTest extends TestCase
 
         $csv = $this->actingAs($this->admin)->get('/admin/paiements/export')->assertOk()->streamedContent();
         $this->assertStringContainsString("'=CMD()", $csv);
+    }
+
+    public function test_export_pdf_des_encaissements(): void
+    {
+        $this->actingAs($this->caissiere);
+        Client::create(['type' => Client::TYPE_JOURNALIER, 'nom' => '<script>alert(1)</script>', 'telephone' => '0700000098']);
+        $this->post('/caisse/journalier', ['telephone' => '0700000098', 'mode' => 'wave']);
+
+        $this->get('/admin/paiements/export-pdf')->assertForbidden();
+
+        $reponse = $this->actingAs($this->admin)->get('/admin/paiements/export-pdf?mode=periode&du='.today()->toDateString().'&au='.today()->toDateString());
+        $reponse->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $reponse->getContent());
+        $this->assertStringContainsString('encaissements_', $reponse->headers->get('content-disposition'));
     }
 
     public function test_upload_photo_refuse_les_fichiers_non_images(): void

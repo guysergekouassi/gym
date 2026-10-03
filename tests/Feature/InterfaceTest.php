@@ -97,9 +97,32 @@ class InterfaceTest extends TestCase
         $this->actingAs($this->caissiere)->post('/caisse/journalier', ['mode' => 'especes']);
 
         $this->actingAs($this->admin)->get('/dashboard')->assertOk()
-            ->assertViewHas('recettes', fn ($r) => count($r) === 7 && end($r)['journalier'] > 0)
+            ->assertViewHas('serie', fn ($r) => count($r['etiquettes']) === 7 && end($r['journalier']) > 0)
             ->assertViewHas('repartition')
             ->assertSee('Évolution des revenus')
             ->assertSee('Répartition des clients');
+    }
+
+    public function test_liste_deroulante_des_clients_et_date_dadhesion(): void
+    {
+        foreach (['Zadi', 'Aka', 'Bamba'] as $nom) {
+            Client::create(['type' => Client::TYPE_ABONNE, 'nom' => $nom]);
+        }
+
+        // Liste ouverte sans recherche : clients par ordre alphabétique
+        $this->actingAs($this->caissiere)->getJson('/caisse/clients')->assertOk()
+            ->assertJsonPath('0.nom', 'Aka')->assertJsonCount(3);
+        $this->getJson('/caisse/clients?q=bam')->assertJsonCount(1)->assertJsonPath('0.nom', 'Bamba');
+
+        $this->post('/clients', ['type' => Client::TYPE_ABONNE, 'nom' => 'Nouveau'])->assertSessionHasNoErrors();
+        $this->assertTrue(Client::where('nom', 'Nouveau')->firstOrFail()->date_adhesion->isToday());
+
+        $this->post('/clients', ['type' => Client::TYPE_ABONNE, 'nom' => 'Ancien', 'date_adhesion' => '2024-05-02'])->assertSessionHasNoErrors();
+        $ancien = Client::where('nom', 'Ancien')->firstOrFail();
+        $this->assertSame('2024-05-02', $ancien->date_adhesion->toDateString());
+        $this->get("/clients/{$ancien->id}")->assertSee('Membre depuis le 02/05/2024');
+
+        $this->post('/clients', ['type' => Client::TYPE_ABONNE, 'nom' => 'Futur', 'date_adhesion' => '2099-01-01'])
+            ->assertSessionHasErrors('date_adhesion');
     }
 }

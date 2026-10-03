@@ -113,14 +113,11 @@ class CaisseController extends Controller
     {
         $q = trim((string) $request->query('q', ''));
 
-        if (mb_strlen($q) < 2) {
-            return response()->json([]);
-        }
-
+        // Sans recherche : les 20 premiers clients (ordre alphabétique) pour la liste déroulante
         $clients = Client::query()
-            ->tap(fn ($query) => Recherche::appliquer($query, $q, ['nom', 'prenoms', 'telephone', 'empreinte_id']))
-            ->orderBy('nom')
-            ->limit(10)
+            ->when($q !== '', fn ($query) => Recherche::appliquer($query, $q, ['nom', 'prenoms', 'telephone', 'empreinte_id']))
+            ->orderBy('nom')->orderBy('prenoms')
+            ->limit(20)
             ->get();
 
         return response()->json($clients->map(fn (Client $c) => [

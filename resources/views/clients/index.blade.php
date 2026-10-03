@@ -37,6 +37,7 @@
             <option value="en_regle" @selected(request('statut') === 'en_regle')>En règle</option>
             <option value="expire_bientot" @selected(request('statut') === 'expire_bientot')>Expire bientôt</option>
             <option value="expire" @selected(request('statut') === 'expire')>Expiré</option>
+            <option value="a_relancer" @selected(request('statut') === 'a_relancer')>À relancer (absents {{ config('salle.kpi.inactif_jours') }} j)</option>
         </select>
         <button type="submit" class="btn-dark py-2">Filtrer</button>
     </form>
@@ -122,7 +123,7 @@
             <div class="space-y-4">
                 <p class="text-sm font-semibold text-slate-900">Informations complémentaires</p>
                 <div class="grid grid-cols-2 gap-3">
-                    <div><label class="label" for="m-naissance">Date de naissance</label><input id="m-naissance" type="date" name="date_naissance" value="{{ old('date_naissance') }}" class="input"></div>
+                    <div><label class="label" for="m-adhesion">Date d'adhésion</label><input id="m-adhesion" type="date" name="date_adhesion" value="{{ old('date_adhesion', today()->toDateString()) }}" max="{{ today()->addYear()->toDateString() }}" class="input"></div>
                     <div>
                         <label class="label" for="m-sexe">Sexe</label>
                         <select id="m-sexe" name="sexe" class="input"><option value="">—</option><option value="M" @selected(old('sexe') === 'M')>Homme</option><option value="F" @selected(old('sexe') === 'F')>Femme</option></select>
@@ -136,14 +137,7 @@
                     </div>
                     <p class="hint">Enregistrez ensuite le doigt sur la pointeuse avec ce même n°.</p>
                 </div>
-                <div>
-                    <span class="label">Photo (optionnel)</span>
-                    <label class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 px-4 py-5 text-center text-sm text-slate-500 hover:border-brand-300 hover:bg-brand-50/40">
-                        <x-icon name="user-plus" class="mb-1 size-6"/> Télécharger une photo
-                        <span class="text-xs">JPG, PNG ou WebP · 2 Mo max</span>
-                        <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" class="mt-2 max-w-full text-xs">
-                    </label>
-                </div>
+                <x-champ-photo id="m-photo"/>
                 <label class="flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-sm text-brand-800">
                     <input type="checkbox" name="abonner" value="1" @checked(old('abonner', request('nouveau') ? true : false)) class="size-4 accent-brand-500">
                     Ouvrir la caisse pour l'abonner juste après

@@ -38,8 +38,8 @@
                 <input id="email" type="email" name="email" maxlength="150" value="{{ old('email', $client->email) }}" class="input">
             </div>
             <div>
-                <label for="date_naissance" class="label">Date de naissance</label>
-                <input id="date_naissance" type="date" name="date_naissance" value="{{ old('date_naissance', $client->date_naissance?->toDateString()) }}" class="input">
+                <label for="date_adhesion" class="label">Date d'adhésion</label>
+                <input id="date_adhesion" type="date" name="date_adhesion" value="{{ old('date_adhesion', ($client->date_adhesion ?? today())->toDateString()) }}" max="{{ today()->addYear()->toDateString() }}" class="input">
             </div>
             <div>
                 <label for="sexe" class="label">Sexe</label>
@@ -84,14 +84,8 @@
 
         <div class="card">
             <div class="card-header"><h2 class="card-title">Photo</h2></div>
-            <div class="card-body flex items-center gap-4">
-                @if($client->exists)
-                    <x-avatar :client="$client" size="size-16" text="text-xl"/>
-                @endif
-                <div class="min-w-0 flex-1">
-                    <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-semibold hover:file:bg-slate-200">
-                    <p class="hint">JPG, PNG ou WebP · 2 Mo max. Affichée à l'accueil quand le client pointe.</p>
-                </div>
+            <div class="card-body">
+                <x-champ-photo id="photo" :actuelle="$client->photo_url"/>
             </div>
         </div>
 
