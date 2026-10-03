@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\AuthentifierLecteur;
+use App\Http\Middleware\EnTetesSecurite;
+use App\Http\Middleware\ForcerChangementMotDePasse;
 use App\Http\Middleware\VerifierRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,10 +19,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => VerifierRole::class,
             'lecteur' => AuthentifierLecteur::class,
+            'mdp.change' => ForcerChangementMotDePasse::class,
         ]);
 
+        $middleware->append(EnTetesSecurite::class);
+
         $middleware->redirectGuestsTo('/login');
+        $middleware->redirectUsersTo('/');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Jamais de mots de passe ou de tokens dans les logs / pages d'erreur
+        $exceptions->dontFlash(['password', 'password_confirmation', 'current_password', 'mot_de_passe']);
     })->create();
