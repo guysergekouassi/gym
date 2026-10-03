@@ -6,7 +6,7 @@ return [
     'adresse' => env('SALLE_ADRESSE', "Abidjan, Côte d'Ivoire"),
     'telephone' => env('SALLE_TELEPHONE', ''),
 
-    // Tarif par défaut d'une entrée journalière (FCFA)
+    // Tarif initial d'une entrée journalière (FCFA) — ensuite modifiable par l'admin dans l'application
     'tarif_journalier' => (int) env('SALLE_TARIF_JOURNALIER', 2000),
 
     'kpi' => [
@@ -16,7 +16,7 @@ return [
         'expiration_alerte_jours' => (int) env('KPI_ALERTE_EXPIRATION', 7),
     ],
 
-    // Un même client qui scanne plusieurs fois dans ce délai = un seul passage
+    // Un même client qui badge plusieurs fois dans ce délai = un seul passage
     'anti_doublon_secondes' => (int) env('ANTI_DOUBLON_SECONDES', 120),
 
     'impression' => [
@@ -26,6 +26,7 @@ return [
         'connecteur' => env('RECU_CONNECTEUR', 'network'), // network | windows | fichier
         'cible' => env('RECU_CIBLE', '192.168.1.100'),       // IP, nom de partage Windows, ou /dev/usb/lp0
         'port' => (int) env('RECU_PORT', 9100),
+        'largeur_mm' => in_array((int) env('RECU_LARGEUR', 80), [58, 80], true) ? (int) env('RECU_LARGEUR', 80) : 80,
     ],
 
 ];

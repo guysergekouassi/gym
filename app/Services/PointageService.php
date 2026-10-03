@@ -10,22 +10,26 @@ use App\Models\User;
 
 class PointageService
 {
-    /** Passage via le lecteur d'empreinte. */
-    public function parEmpreinte(string $empreinteId, ?Lecteur $lecteur = null): Passage
+    /**
+     * Passage au lecteur de badge : soit le boîtier réseau (API + token),
+     * soit le lecteur USB branché sur le poste d'accueil (session caisse).
+     */
+    public function parBadge(string $badgeId, ?Lecteur $lecteur = null, ?User $poste = null): Passage
     {
-        $client = Client::where('empreinte_id', $empreinteId)->first();
+        $client = Client::where('badge_id', $badgeId)->first();
 
         if (! $client) {
             return $this->enregistrer([
                 'lecteur_id' => $lecteur?->id,
-                'methode' => Passage::METHODE_EMPREINTE,
+                'user_id' => $poste?->id,
+                'methode' => Passage::METHODE_BADGE,
                 'statut' => Passage::STATUT_REFUSE,
-                'motif' => 'empreinte_inconnue',
-                'empreinte_id' => $empreinteId,
+                'motif' => 'badge_inconnu',
+                'badge_id' => $badgeId,
             ]);
         }
 
-        // Anti-doublon : un client qui repose le doigt plusieurs fois ne crée qu'un passage
+        // Anti-doublon : un client qui repasse son badge plusieurs fois ne crée qu'un passage
         $recent = Passage::where('client_id', $client->id)
             ->where('statut', Passage::STATUT_AUTORISE)
             ->where('passe_le', '>=', now()->subSeconds((int) config('salle.anti_doublon_secondes')))
@@ -41,10 +45,11 @@ class PointageService
         return $this->enregistrer([
             'client_id' => $client->id,
             'lecteur_id' => $lecteur?->id,
-            'methode' => Passage::METHODE_EMPREINTE,
+            'user_id' => $poste?->id,
+            'methode' => Passage::METHODE_BADGE,
             'statut' => $autorise ? Passage::STATUT_AUTORISE : Passage::STATUT_REFUSE,
             'motif' => $motif,
-            'empreinte_id' => $empreinteId,
+            'badge_id' => $badgeId,
         ]);
     }
 
@@ -67,8 +72,9 @@ class PointageService
             return $client->abonnementActif() ? [true, null] : [false, 'abonnement_expire'];
         }
 
-        // Journalier enrôlé : il doit avoir payé aujourd'hui
+        // Journalier badgé : il doit avoir payé (et non annulé) aujourd'hui
         $aPaye = $client->paiements()
+            ->valides()
             ->where('type', Paiement::TYPE_JOURNALIER)
             ->whereDate('created_at', today()->toDateString())
             ->exists();
