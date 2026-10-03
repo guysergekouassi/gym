@@ -78,4 +78,15 @@ class SuppressionTest extends TestCase
         $this->delete("/admin/pointeuses/{$pointeuse->id}/definitif")->assertSessionHas('succes');
         $this->assertDatabaseMissing('lecteurs', ['id' => $pointeuse->id]);
     }
+
+    public function test_sauvegarde_quotidienne(): void
+    {
+        $dossier = storage_path('app/sauvegardes');
+        \Illuminate\Support\Facades\File::deleteDirectory($dossier);
+
+        // Base de test en mémoire : on vérifie simplement que la commande s'exécute
+        $this->artisan('salle:sauvegarder')->assertSuccessful();
+
+        \Illuminate\Support\Facades\File::deleteDirectory($dossier);
+    }
 }
