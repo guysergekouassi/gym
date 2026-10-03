@@ -24,13 +24,13 @@ class Client extends Model
     ];
 
     protected $fillable = [
-        'type', 'nom', 'prenoms', 'telephone', 'email', 'date_naissance',
+        'type', 'nom', 'prenoms', 'telephone', 'email', 'date_naissance', 'date_adhesion',
         'sexe', 'photo_path', 'empreinte_id', 'notes',
     ];
 
     protected function casts(): array
     {
-        return ['date_naissance' => 'date'];
+        return ['date_naissance' => 'date', 'date_adhesion' => 'date'];
     }
 
     public function abonnements(): HasMany

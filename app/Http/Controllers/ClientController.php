@@ -88,6 +88,7 @@ class ClientController extends Controller
             $data['photo_path'] = $this->stockerPhoto($request->file('photo'));
         }
 
+        $data['date_adhesion'] ??= today(); // par défaut : inscrit aujourd'hui
         $client = Client::create($data);
         $this->pointeuse->ajouterOuModifier($client);
 
@@ -131,6 +132,7 @@ class ClientController extends Controller
             $data['photo_path'] = $this->stockerPhoto($request->file('photo'));
         }
 
+        $data['date_adhesion'] ??= $client->date_adhesion ?? today();
         $ancienNumero = $client->empreinte_id;
         $client->update($data);
 
@@ -171,7 +173,7 @@ class ClientController extends Controller
             'prenoms' => ['nullable', 'string', 'max:150'],
             'telephone' => ['nullable', 'string', 'regex:/^[0-9+() .-]{6,20}$/', Rule::unique('clients', 'telephone')->ignore($client?->id)],
             'email' => ['nullable', 'email', 'max:150'],
-            'date_naissance' => ['nullable', 'date', 'before:today', 'after:1900-01-01'],
+            'date_adhesion' => ['nullable', 'date', 'after:2000-01-01', 'before_or_equal:'.today()->addYear()->toDateString()],
             'sexe' => ['nullable', Rule::in(['M', 'F'])],
             'empreinte_id' => ['nullable', 'string', Empreinte::REGLE, Rule::unique('clients', 'empreinte_id')->ignore($client?->id)],
             'notes' => ['nullable', 'string', 'max:1000'],

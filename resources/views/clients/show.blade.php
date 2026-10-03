@@ -25,6 +25,7 @@
                 @endif
                 <span class="pill-gray"><x-icon name="fingerprint" class="size-3.5"/> {{ $client->empreinte_id ? 'Empreinte n°'.$client->empreinte_id : 'Empreinte non enregistrée' }}</span>
                 @if($client->telephone)<span class="text-slate-500">{{ $client->telephone }}</span>@endif
+                @if($client->date_adhesion)<span class="text-slate-500">· Membre depuis le {{ $client->date_adhesion->format('d/m/Y') }}</span>@endif
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
