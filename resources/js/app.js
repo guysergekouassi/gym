@@ -378,3 +378,10 @@ $$('[data-champ-photo]').forEach((bloc) => {
     });
     retirer.addEventListener('click', reinitialiser);
 });
+
+// --- Menus déroulants (<details>) : se ferment quand on clique ailleurs ---
+document.addEventListener('click', (e) => {
+    $$('details[open]').forEach((d) => {
+        if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+});

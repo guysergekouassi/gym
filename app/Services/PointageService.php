@@ -74,6 +74,37 @@ class PointageService
         ]);
     }
 
+    /** Membre reconnu par la pointeuse mais refusé par elle (période de validité dépassée…). */
+    public function refus(string $empreinteId, Lecteur $lecteur, CarbonInterface $quand): Passage
+    {
+        $existant = Passage::where('lecteur_id', $lecteur->id)->where('empreinte_id', $empreinteId)->where('passe_le', $quand)->first();
+        if ($existant) {
+            return $existant;
+        }
+
+        $client = Client::where('empreinte_id', $empreinteId)->first();
+        $motif = $client ? ($this->verifierDroit($client, $quand)[1] ?? 'refus_pointeuse') : 'empreinte_inconnue';
+
+        return $this->enregistrer([
+            'client_id' => $client?->id,
+            'lecteur_id' => $lecteur->id,
+            'methode' => Passage::METHODE_EMPREINTE,
+            'statut' => Passage::STATUT_REFUSE,
+            'motif' => $motif,
+            'empreinte_id' => $empreinteId,
+            'passe_le' => $quand,
+        ]);
+    }
+
+    /** Doigt inconnu de la pointeuse. */
+    public function refusInconnu(Lecteur $lecteur, CarbonInterface $quand): Passage
+    {
+        return Passage::firstOrCreate(
+            ['lecteur_id' => $lecteur->id, 'empreinte_id' => null, 'passe_le' => $quand, 'motif' => 'empreinte_inconnue'],
+            ['methode' => Passage::METHODE_EMPREINTE, 'statut' => Passage::STATUT_REFUSE],
+        );
+    }
+
     /** Passage validé par la caissière après encaissement d'un journalier. */
     public function parCaisse(Paiement $paiement, User $caissier, bool $avecClient = true): Passage
     {

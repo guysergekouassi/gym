@@ -8,15 +8,22 @@ use Illuminate\Support\Str;
 
 class Lecteur extends Model
 {
-    protected $fillable = ['nom', 'numero_serie', 'adresse_ip', 'token_hash', 'actif', 'derniere_activite_at', 'stamp_pointages'];
+    protected $fillable = [
+        'nom', 'numero_serie', 'adresse_ip', 'port', 'identifiant', 'mot_de_passe', 'modele',
+        'token_hash', 'actif', 'derniere_activite_at', 'dernier_evenement_le', 'derniere_erreur',
+    ];
 
-    protected $hidden = ['token_hash'];
+    // Ni le token ni le mot de passe de la pointeuse ne sortent jamais du serveur
+    protected $hidden = ['token_hash', 'mot_de_passe'];
 
     protected function casts(): array
     {
         return [
             'actif' => 'boolean',
+            'port' => 'integer',
+            'mot_de_passe' => 'encrypted', // chiffré en base avec la clé de l'application
             'derniere_activite_at' => 'datetime',
+            'dernier_evenement_le' => 'datetime',
         ];
     }
 
@@ -30,15 +37,20 @@ class Lecteur extends Model
         return $this->hasMany(CommandePointeuse::class);
     }
 
-    /** Pointeuses en réseau joignables par le protocole Cloud (ADMS). */
+    /** Pointeuses Hikvision configurées (adresse IP + mot de passe). */
     public function scopePointeuses($query): void
     {
-        $query->where('actif', true)->whereNotNull('numero_serie');
+        $query->where('actif', true)->whereNotNull('adresse_ip')->whereNotNull('mot_de_passe');
+    }
+
+    public function estPointeuse(): bool
+    {
+        return $this->adresse_ip !== null && $this->mot_de_passe !== null;
     }
 
     public function estEnLigne(): bool
     {
-        return $this->derniere_activite_at !== null && $this->derniere_activite_at->gt(now()->subMinutes(2));
+        return $this->derniere_activite_at !== null && $this->derniere_activite_at->gt(now()->subMinute());
     }
 
     /**

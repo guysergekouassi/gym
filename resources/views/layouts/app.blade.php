@@ -25,6 +25,13 @@
         </a>
 
         <nav class="defilement-discret -mr-2 mt-6 flex-1 overflow-y-auto pr-2">
+            @if($user->isAdmin())
+                <x-menu-section nom="pilotage" titre="Pilotage">
+                    <a href="{{ route('dashboard') }}" class="{{ $actif('dashboard') }}"><x-icon name="home"/> Tableau de bord</a>
+                    <a href="{{ route('admin.paiements.index') }}" class="{{ $actif('admin.paiements.*') }}"><x-icon name="receipt"/> Encaissements</a>
+                </x-menu-section>
+            @endif
+
             <x-menu-section nom="quotidien" titre="Quotidien">
                 @unless($user->isAdmin())
                     <a href="{{ route('journee') }}" class="{{ $actif('journee') }}"><x-icon name="home"/> Tableau de bord</a>
@@ -35,11 +42,6 @@
             </x-menu-section>
 
             @if($user->isAdmin())
-                <x-menu-section nom="pilotage" titre="Pilotage">
-                    <a href="{{ route('dashboard') }}" class="{{ $actif('dashboard') }}"><x-icon name="home"/> Tableau de bord</a>
-                    <a href="{{ route('admin.paiements.index') }}" class="{{ $actif('admin.paiements.*') }}"><x-icon name="receipt"/> Encaissements</a>
-                </x-menu-section>
-
                 <x-menu-section nom="administration" titre="Administration">
                     <a href="{{ route('admin.formules.index') }}" class="{{ $actif('admin.formules.*') }}"><x-icon name="tag"/> Formules &amp; tarifs</a>
                     <a href="{{ route('admin.utilisateurs.index') }}" class="{{ $actif('admin.utilisateurs.*') }}"><x-icon name="shield"/> Utilisateurs</a>
