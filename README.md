@@ -1,6 +1,11 @@
 # GymFlow — Gestion de salle de sport (Laravel)
 
-Abonnés et journaliers, pointage par empreinte, encaissement en caisse avec reçu, historique des passages et KPI (actifs, moins actifs, renouvellements).
+Deux accès :
+
+- **Caissière** : encaisse les **passages** (séance à l'unité) et les **abonnements**, crée les fiches clients, attribue les badges, imprime le ticket. Elle ne voit que sa propre caisse et ne peut ni annuler un ticket ni modifier un prix.
+- **Responsable (admin)** : tout ce que fait la caissière + tableau de bord, journal des encaissements (filtre, export Excel, annulation motivée), formules & tarifs, comptes du personnel, lecteurs de badge.
+
+Contrôle d'accès par **badge**, ticket sur **imprimante thermique** 80 ou 58 mm.
 
 ## 1. Installer le projet
 
@@ -29,7 +34,7 @@ DB_PASSWORD=
 
 Les réglages de la salle sont déjà dans `.env.example` (`SALLE_NOM`, `SALLE_ADRESSE`, `SALLE_TELEPHONE`, `SALLE_TARIF_JOURNALIER`, `RECU_DRIVER`).
 
-L'interface charge Tailwind depuis son CDN : le poste doit avoir accès à internet pour l'affichage.
+L'interface est **déjà compilée** dans `public/build` : ni Node.js ni internet ne sont nécessaires sur le poste de la salle. (Après une modification des vues : `npm install && npm run build`.)
 
 ## 3. Lancer les tests
 
@@ -45,57 +50,50 @@ php artisan storage:link
 php artisan serve
 ```
 
-Le seeder affiche **le token du lecteur d'empreinte** : copie-le, il ne sera plus affiché.
-
-Comptes créés (à changer immédiatement) :
+Comptes créés — **le mot de passe doit être changé à la première connexion** (imposé par l'application) :
 
 | Rôle | E-mail | Mot de passe |
 |---|---|---|
 | Admin | admin@gymflow.local | ChangeMoi!2026 |
 | Caissière | caisse@gymflow.local | ChangeMoi!2026 |
 
-## 5. Tester le pointage sans lecteur
+## 5. Brancher le lecteur de badge
 
-1. Crée un client abonné avec `ID empreinte = 1`, puis abonne-le depuis la caisse.
-2. Ouvre l'**écran d'accueil** (menu) dans un autre onglet.
-3. Simule un scan :
+**Lecteur USB (le plus courant, rien à configurer)** : il se comporte comme un clavier (il « tape » le numéro du badge puis Entrée).
+
+1. Brancher le lecteur sur le PC d'accueil, se connecter avec un compte caissière.
+2. Ouvrir **Écran d'accueil** (menu) sur l'écran tourné vers les clients, cliquer « Plein écran ».
+3. Le client passe son badge : écran **vert** (bienvenue + jours restants) ou **rouge** (motif), avec un bip.
+
+Pour attribuer un badge : fiche client → champ « N° de badge » → cliquer dedans et passer le badge sur le lecteur.
+
+**Boîtier réseau (ZKTeco, etc.)** : menu *Lecteurs de badge* → générer un token (affiché une seule fois), puis le boîtier ou un agent local appelle :
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/pointage/empreinte \
-  -H "Authorization: Bearer TON_TOKEN" \
-  -H "Accept: application/json" \
-  -d "empreinte_id=1"
+curl -X POST http://IP_DU_SERVEUR/api/pointage/badge \
+  -H "Authorization: Bearer TOKEN" -H "Accept: application/json" -d "badge_id=0012345678"
 ```
 
-L'écran d'accueil passe au vert avec la fiche du client. Avec un ID inconnu ou un abonnement expiré : écran rouge + motif.
-
-## 6. Brancher le vrai lecteur d'empreinte
-
-L'API attend `POST /api/pointage/empreinte` avec `empreinte_id` et le token en `Authorization: Bearer`.
-
-- **Enrôlement** : le doigt est enregistré sur l'appareil, qui attribue un numéro. Ce numéro est saisi dans la fiche client (champ « ID empreinte »). On ne stocke jamais l'image de l'empreinte.
-- **Transmission du scan** : soit l'appareil pousse lui-même vers une URL HTTP (mode push/ADMS de nombreux ZKTeco, via un petit adaptateur), soit un agent local sur le PC d'accueil lit le SDK du lecteur et appelle l'API.
-- Un lecteur supplémentaire : `php artisan salle:lecteur "Entrée secondaire"`.
-
-## 7. Impression des reçus
+## 6. Imprimante thermique (tickets)
 
 | Mode | Quand l'utiliser |
 |---|---|
-| `navigateur` (défaut) | Toujours fonctionnel. Reçu HTML 80 mm, impression automatique. Dans Chrome, régler l'imprimante thermique par défaut ; en mode kiosque (`--kiosk-printing`) l'impression part sans boîte de dialogue. |
-| `escpos` | Impression directe. **Uniquement si le serveur Laravel est sur le réseau local de la salle** (un hébergement mutualisé distant ne voit pas l'imprimante). |
+| `navigateur` (défaut, recommandé) | Installer le pilote de l'imprimante sous Windows et la mettre **par défaut**. Le ticket s'imprime à chaque encaissement. Pour supprimer la boîte de dialogue : lancer Chrome avec `--kiosk-printing`. Régler `RECU_LARGEUR=58` pour un rouleau 58 mm. |
+| `escpos` | Impression directe sans navigateur, **seulement si Laravel tourne sur le PC de la salle** ou sur le même réseau que l'imprimante. `composer require mike42/escpos-php` puis `RECU_DRIVER=escpos`, `RECU_CONNECTEUR=network\|windows\|fichier`, `RECU_CIBLE=192.168.1.100`. |
 
-Pour `escpos` :
+## 7. Sécurité (déjà en place)
 
-```bash
-composer require mike42/escpos-php
-```
+- Rôles vérifiés côté serveur sur chaque route (une caissière qui tape une URL admin reçoit 403).
+- Mots de passe : 10 caractères min., majuscule/minuscule/chiffre ; changement **obligatoire** à la première connexion et après réinitialisation par l'admin.
+- Anti force brute : 5 essais par compte et par IP puis blocage 5 min ; échecs journalisés.
+- Désactivation/réinitialisation d'un compte : déconnexion immédiate de toutes ses sessions.
+- Montant du passage imposé par le serveur (la caissière ne peut pas saisir 0) ; aucun ticket supprimable, seule l'annulation motivée par l'admin (tracée : qui, quand, pourquoi).
+- En-têtes HTTP : CSP stricte (aucun script inline ou tiers), anti-clickjacking, `nosniff`, pas de cache des pages connectées (poste partagé).
+- Aucune ressource externe (CDN, polices) : rien ne peut être injecté par un tiers, et l'appli marche hors ligne.
+- Photos : JPG/PNG/WebP uniquement, renommées aléatoirement. Recherches protégées (paramètres liés, jokers échappés). Export CSV protégé contre l'injection de formules Excel.
+- Token des lecteurs stocké haché (SHA-256), révocable ; API limitée en débit.
 
-```dotenv
-RECU_DRIVER=escpos
-RECU_CONNECTEUR=network   # network | windows | fichier
-RECU_CIBLE=192.168.1.100  # IP de l'imprimante, nom de partage Windows, ou /dev/usb/lp0
-RECU_PORT=9100
-```
+**Checklist de mise en production** : `APP_ENV=production`, `APP_DEBUG=false`, `php artisan key:generate` (clé unique), `SESSION_ENCRYPT=true`, HTTPS si accessible hors de la salle (+ `SESSION_SECURE_COOKIE=true`), `expose_php=Off` dans php.ini, sauvegarde quotidienne de la base, `php artisan config:cache route:cache view:cache`.
 
 ## 8. Règles des KPI (réglables dans `config/salle.php`)
 
@@ -110,20 +108,16 @@ Un renouvellement anticipé ne fait perdre aucun jour : le nouvel abonnement dé
 
 ## 9. Conformité
 
-La collecte de données biométriques en Côte d'Ivoire nécessite une **autorisation préalable de l'ARTCI** (loi n° 2013-450 sur la protection des données personnelles). Prévoir aussi le consentement écrit des clients à l'enrôlement.
+Les fiches clients sont des données personnelles (loi ivoirienne n° 2013-450) : déclaration du traitement à l'**ARTCI** et information des clients. Si un jour un lecteur à **empreinte** est utilisé, une autorisation préalable de l'ARTCI est obligatoire.
 
 ## Arborescence
 
 ```
-app/
-  Http/Controllers/  Accueil, Caisse, Client, Dashboard, Recu, Auth/Login, Api/Pointage
-  Http/Middleware/   AuthentifierLecteur (token lecteur), VerifierRole
-  Models/            Client, Abonnement, Formule, Paiement, Passage, Lecteur, User
-  Services/          PointageService, CaisseService, KpiService, RecuService
-  Support/Fcfa.php
-config/salle.php
-database/migrations, database/seeders
-resources/views/     dashboard, caisse, clients, accueil, recus, auth, layouts
-routes/              web.php, api.php, console.php
-tests/Feature/       GymFlowTest.php
+app/Http/Controllers/        Caisse, Client, Dashboard, Recu, Accueil, Auth/{Login,MotDePasse}, Api/Pointage
+app/Http/Controllers/Admin/  Paiement, Formule, Utilisateur, Lecteur
+app/Http/Middleware/         VerifierRole, AuthentifierLecteur, ForcerChangementMotDePasse, EnTetesSecurite
+app/Services/                CaisseService, PointageService, KpiService, RecuService
+resources/views/             layouts, caisse, clients, dashboard, admin/*, accueil, recus, auth, errors
+resources/js/                app.js (interface), accueil.js (écran d'entrée + lecteur USB)
+tests/Feature/               GymFlowTest, SecuriteEtAdminTest
 ```
