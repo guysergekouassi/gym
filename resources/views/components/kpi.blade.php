@@ -10,12 +10,12 @@
     ];
 @endphp
 {{-- La taille du chiffre s'adapte à la largeur de la carte (requêtes de conteneur) : il ne déborde jamais --}}
-<div {{ $attributes->merge(['class' => 'card @container p-5']) }}>
-    <div class="flex flex-col gap-3 @[12rem]:flex-row @[12rem]:gap-3.5">
-        <span class="pastille size-11 {{ $tons[$tone] ?? $tons['green'] }}"><x-icon :name="$icon" class="size-6"/></span>
+<div {{ $attributes->merge(['class' => 'card @container p-4 2xl:p-5']) }}>
+    <div class="flex gap-3">
+        <span class="pastille size-10 @[15rem]:size-12 {{ $tons[$tone] ?? $tons['green'] }}"><x-icon :name="$icon" class="size-6"/></span>
         <div class="min-w-0 flex-1">
-            <p class="text-sm font-medium leading-snug text-slate-600">{{ $label }}</p>
-            <p class="mt-1 break-words text-lg font-bold leading-tight tracking-tight text-slate-900 @[17rem]:text-xl @[20rem]:text-2xl">{{ $value }}</p>
+            <p class="text-[13px] font-medium leading-snug text-slate-600 @[15rem]:text-sm">{{ $label }}</p>
+            <p class="mt-1 whitespace-nowrap text-[clamp(0.8rem,8.5cqi,1.6rem)] font-bold leading-tight tracking-tight text-slate-900">{{ $value }}</p>
             @if($variation !== null)
                 <p class="mt-2">
                     @if($variation >= 0)

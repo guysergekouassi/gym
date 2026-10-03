@@ -13,6 +13,11 @@
         </span>
         <x-icon name="chevron-down" class="size-4 shrink-0 text-slate-500"/>
     </button>
+    {{-- Vider le choix --}}
+    <button type="button" data-client-vider aria-label="Retirer le client choisi" title="Retirer le client choisi"
+            class="{{ $preselection ? '' : 'hidden' }} absolute right-10 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600">
+        <x-icon name="x" class="size-4"/>
+    </button>
 
     <div data-client-panneau hidden class="absolute z-30 mt-2 w-full overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-slate-200">
         <div class="border-b border-slate-100 p-2">

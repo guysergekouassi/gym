@@ -29,7 +29,7 @@
 </div>
 
 {{-- Chiffres clés de la période choisie --}}
-<div class="mb-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+<div class="mb-5 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 2xl:gap-5">
     <x-kpi label="Clients inscrits" :value="$chiffres['clients_inscrits']" icon="users" tone="green"
            :variation="KpiService::variation($chiffres['clients_inscrits'], $avant['clients_inscrits'])" :reference="$ref"
            :hint="$clientsTotal.' clients au total'"/>
@@ -43,16 +43,16 @@
            :variation="KpiService::variation($chiffres['tickets'], $avant['tickets'])" :reference="$ref"/>
 </div>
 
-<div class="mb-6 grid gap-6 lg:grid-cols-2 2xl:grid-cols-12">
-    <section class="card flex flex-col p-6 2xl:col-span-5">
+<div class="mb-5 grid gap-5 lg:grid-cols-12">
+    <section class="card flex flex-col p-5 lg:col-span-5 2xl:p-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-lg font-semibold text-slate-900">Évolution des revenus <span class="text-sm font-normal text-slate-500">({{ $serie['titre'] }})</span></h2>
+            <h2 class="text-base font-semibold text-slate-900 2xl:text-lg">Évolution des revenus <span class="text-sm font-normal text-slate-500">({{ $serie['titre'] }})</span></h2>
             <div class="flex gap-4 text-xs text-slate-600">
                 <span class="inline-flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-serie-1"></span> Abonnements</span>
                 <span class="inline-flex items-center gap-1.5"><span class="size-2.5 rounded-full bg-serie-2"></span> Passages</span>
             </div>
         </div>
-        <x-chart.lignes class="my-auto pt-4" :hauteur="290" titre="Évolution des revenus"
+        <x-chart.lignes class="my-auto pt-3" :largeur="520" :hauteur="300" titre="Évolution des revenus"
             :etiquettes="$serie['etiquettes']"
             :series="[
                 ['nom' => 'Abonnements', 'couleur' => '#0f9960', 'valeurs' => $serie['abonnement']],
@@ -60,14 +60,14 @@
             ]"/>
     </section>
 
-    <section class="card p-6 2xl:col-span-4">
-        <h2 class="mb-6 text-lg font-semibold text-slate-900">Répartition des clients</h2>
+    <section class="card p-5 lg:col-span-4 2xl:p-6">
+        <h2 class="mb-5 text-base font-semibold text-slate-900 2xl:text-lg">Répartition des clients</h2>
         <x-chart.anneau :centre="$clientsTotal" sous-titre="clients" :afficher-valeurs="false"
             :parts="collect($repartition)->values()->map(fn ($p, $i) => $p + ['couleur' => $couleurs[$i] ?? '#94a3b8'])->all()"/>
     </section>
 
-    <section class="card lg:col-span-2 2xl:col-span-3">
-        <div class="card-header"><h2 class="text-lg font-semibold text-slate-900">Activité récente</h2><a href="{{ route('admin.paiements.index') }}" class="link text-xs">Voir tout</a></div>
+    <section class="card lg:col-span-3">
+        <div class="card-header"><h2 class="text-base font-semibold text-slate-900 2xl:text-lg">Activité récente</h2><a href="{{ route('admin.paiements.index') }}" class="link whitespace-nowrap text-xs">Voir tout</a></div>
         <ul class="divide-y divide-slate-100">
             @forelse($activite as $a)
                 @php [$icone, $teinte] = $styleActivite[$a['type']]; @endphp
@@ -86,9 +86,9 @@
     </section>
 </div>
 
-<div class="grid gap-6 lg:grid-cols-2 2xl:grid-cols-3">
+<div class="grid gap-5 lg:grid-cols-3 [&_.table_td]:px-3 [&_.table_th]:px-3 max-2xl:[&_.table]:text-[13px]">
     <section class="card overflow-hidden">
-        <div class="card-header"><h2 class="text-lg font-semibold text-slate-900">Top 5 des abonnements</h2><a href="{{ route('admin.formules.index') }}" class="link text-xs">Voir tout</a></div>
+        <div class="card-header"><h2 class="text-base font-semibold text-slate-900 2xl:text-lg">Top 5 des abonnements</h2><a href="{{ route('admin.formules.index') }}" class="link whitespace-nowrap text-xs">Voir tout</a></div>
         <table class="table">
             <thead><tr><th>#</th><th>Formule</th><th>Nombre de clients</th></tr></thead>
             <tbody>
@@ -113,16 +113,16 @@
     </section>
 
     <section class="card overflow-hidden">
-        <div class="card-header"><h2 class="text-lg font-semibold text-slate-900">Derniers clients</h2><a href="{{ route('clients.index') }}" class="link text-xs">Voir tout</a></div>
+        <div class="card-header"><h2 class="text-base font-semibold text-slate-900 2xl:text-lg">Derniers clients</h2><a href="{{ route('clients.index') }}" class="link whitespace-nowrap text-xs">Voir tout</a></div>
         <div class="overflow-x-auto">
             <table class="table [&_td]:px-3 [&_th]:px-3">
-                <thead><tr><th>Nom</th><th>Type</th><th>Date</th><th>Statut</th></tr></thead>
+                <thead><tr><th>Nom</th><th class="max-2xl:hidden">Type</th><th>Date</th><th>Statut</th></tr></thead>
                 <tbody>
                 @forelse($derniersClients as $c)
                     @php $enRegle = $c->fin_droits && Carbon::parse($c->fin_droits)->gte(today()); @endphp
                     <tr>
                         <td><a href="{{ route('clients.show', $c) }}" class="flex max-w-40 items-center gap-2 font-medium text-slate-900 hover:text-brand-600" title="{{ $c->nom_complet }}"><x-icon name="user" class="size-5 shrink-0 text-slate-400"/> <span class="truncate">{{ $c->nom_complet }}</span></a></td>
-                        <td class="text-slate-600">{{ $c->type === Client::TYPE_ABONNE ? 'Abonnement' : 'Passage' }}</td>
+                        <td class="text-slate-600 max-2xl:hidden">{{ $c->type === Client::TYPE_ABONNE ? 'Abonnement' : 'Passage' }}</td>
                         <td class="whitespace-nowrap text-slate-600">{{ $c->created_at->format('d/m/y') }}</td>
                         <td>
                             @if($enRegle)<span class="pill-green"><x-icon name="check" class="size-3"/> Actif</span>
@@ -138,10 +138,10 @@
         </div>
     </section>
 
-    <section class="card overflow-hidden lg:col-span-2 2xl:col-span-1">
+    <section class="card overflow-hidden">
         <div class="card-header">
-            <h2 class="text-lg font-semibold text-slate-900">Prochains renouvellements</h2>
-            <a href="{{ route('caisse.index', ['onglet' => 'renouvellement']) }}" class="link text-xs">Voir tout</a>
+            <h2 class="text-base font-semibold text-slate-900 2xl:text-lg">Prochains renouvellements</h2>
+            <a href="{{ route('caisse.index', ['onglet' => 'renouvellement']) }}" class="link whitespace-nowrap text-xs">Voir tout</a>
         </div>
         <div class="overflow-x-auto"><table class="table">
             <thead><tr><th>Client</th><th>Formule</th><th>Date</th></tr></thead>
@@ -150,7 +150,7 @@
                 <tr>
                     <td><a href="{{ route('clients.show', $abonnement->client) }}" class="flex items-center gap-2 whitespace-nowrap font-medium text-slate-900 hover:text-brand-600"><x-icon name="user" class="size-5 shrink-0 text-slate-400"/> {{ $abonnement->client->nom_complet }}</a></td>
                     <td class="text-slate-600">{{ $abonnement->formule->nom }}</td>
-                    <td class="whitespace-nowrap"><span class="inline-flex items-center gap-1.5 {{ $abonnement->joursRestants() <= 2 ? 'text-red-600' : 'text-slate-700' }}"><x-icon name="calendar" class="size-4 text-slate-400"/> {{ $abonnement->date_fin->format('d/m/Y') }}</span></td>
+                    <td class="whitespace-nowrap"><span class="inline-flex items-center gap-1.5 {{ $abonnement->joursRestants() <= 2 ? 'text-red-600' : 'text-slate-700' }}"><x-icon name="calendar" class="size-4 text-slate-400 max-2xl:hidden"/> {{ $abonnement->date_fin->format('d/m/y') }}</span></td>
                 </tr>
             @empty
                 <tr><td colspan="3" class="py-8 text-center text-slate-400">Aucune échéance dans les 7 jours</td></tr>

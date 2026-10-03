@@ -6,8 +6,8 @@
     $ecart = count(array_filter($parts, fn ($p) => $p['valeur'] > 0)) > 1 ? 0.8 : 0;
     $cumul = 0;
 @endphp
-<div {{ $attributes->merge(['class' => 'flex flex-wrap items-center gap-6']) }}>
-    <div class="relative size-40 shrink-0 max-sm:mx-auto">
+<div {{ $attributes->merge(['class' => 'flex flex-wrap items-center gap-5']) }}>
+    <div class="relative size-36 shrink-0 max-sm:mx-auto 2xl:size-44">
         <svg viewBox="0 0 42 42" class="size-full -rotate-90" role="img" aria-label="{{ $sousTitre }}">
             <circle cx="21" cy="21" r="{{ $r }}" fill="none" stroke="#eef2f6" stroke-width="5.5"/>
             @foreach($parts as $p)
@@ -26,7 +26,7 @@
             <span class="text-xs text-slate-500">{{ $sousTitre }}</span>
         </div>
     </div>
-    <ul class="min-w-44 flex-1 space-y-3 text-sm">
+    <ul class="min-w-36 flex-1 space-y-3 text-[13px] 2xl:text-sm">
         @foreach($parts as $p)
             <li class="flex items-center gap-2.5">
                 <span class="size-3 shrink-0 rounded-full" style="background: {{ $p['couleur'] }}"></span>
