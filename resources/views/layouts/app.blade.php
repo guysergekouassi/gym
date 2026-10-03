@@ -24,25 +24,28 @@
             <span class="truncate text-2xl font-extrabold tracking-tight text-white">{{ config('salle.nom') }}</span>
         </a>
 
-        <nav class="mt-6 flex-1 overflow-y-auto">
-            <p class="nav-section">Quotidien</p>
-            @unless($user->isAdmin())
-                <a href="{{ route('journee') }}" class="{{ $actif('journee') }}"><x-icon name="home"/> Tableau de bord</a>
-            @endunless
-            <a href="{{ route('caisse.index') }}" class="{{ $actif('caisse.*', 'recus.*') }}"><x-icon name="cash"/> Caisse</a>
-            <a href="{{ route('clients.index') }}" class="{{ $actif('clients.*') }}"><x-icon name="users"/> Clients</a>
-            <a href="{{ route('accueil.index') }}" target="_blank" rel="noopener" class="nav-link"><x-icon name="fingerprint"/> Écran d'accueil <x-icon name="external" class="ml-auto size-4 opacity-50"/></a>
+        <nav class="defilement-discret -mr-2 mt-6 flex-1 overflow-y-auto pr-2">
+            <x-menu-section nom="quotidien" titre="Quotidien">
+                @unless($user->isAdmin())
+                    <a href="{{ route('journee') }}" class="{{ $actif('journee') }}"><x-icon name="home"/> Tableau de bord</a>
+                @endunless
+                <a href="{{ route('caisse.index') }}" class="{{ $actif('caisse.*', 'recus.*') }}"><x-icon name="cash"/> Caisse</a>
+                <a href="{{ route('clients.index') }}" class="{{ $actif('clients.*') }}"><x-icon name="users"/> Clients</a>
+                <a href="{{ route('accueil.index') }}" target="_blank" rel="noopener" class="nav-link"><x-icon name="fingerprint"/> Écran d'accueil <x-icon name="external" class="ml-auto size-4 opacity-50"/></a>
+            </x-menu-section>
 
             @if($user->isAdmin())
-                <p class="nav-section">Pilotage</p>
-                <a href="{{ route('dashboard') }}" class="{{ $actif('dashboard') }}"><x-icon name="home"/> Tableau de bord</a>
-                <a href="{{ route('admin.paiements.index') }}" class="{{ $actif('admin.paiements.*') }}"><x-icon name="receipt"/> Encaissements</a>
+                <x-menu-section nom="pilotage" titre="Pilotage">
+                    <a href="{{ route('dashboard') }}" class="{{ $actif('dashboard') }}"><x-icon name="home"/> Tableau de bord</a>
+                    <a href="{{ route('admin.paiements.index') }}" class="{{ $actif('admin.paiements.*') }}"><x-icon name="receipt"/> Encaissements</a>
+                </x-menu-section>
 
-                <p class="nav-section">Administration</p>
-                <a href="{{ route('admin.formules.index') }}" class="{{ $actif('admin.formules.*') }}"><x-icon name="tag"/> Formules &amp; tarifs</a>
-                <a href="{{ route('admin.utilisateurs.index') }}" class="{{ $actif('admin.utilisateurs.*') }}"><x-icon name="shield"/> Utilisateurs</a>
-                <a href="{{ route('admin.pointeuses.index') }}" class="{{ $actif('admin.pointeuses.*') }}"><x-icon name="fingerprint"/> Pointeuses</a>
-                <a href="{{ route('admin.parametres.edit') }}" class="{{ $actif('admin.parametres.*') }}"><x-icon name="settings"/> Paramètres</a>
+                <x-menu-section nom="administration" titre="Administration">
+                    <a href="{{ route('admin.formules.index') }}" class="{{ $actif('admin.formules.*') }}"><x-icon name="tag"/> Formules &amp; tarifs</a>
+                    <a href="{{ route('admin.utilisateurs.index') }}" class="{{ $actif('admin.utilisateurs.*') }}"><x-icon name="shield"/> Utilisateurs</a>
+                    <a href="{{ route('admin.pointeuses.index') }}" class="{{ $actif('admin.pointeuses.*') }}"><x-icon name="fingerprint"/> Pointeuses</a>
+                    <a href="{{ route('admin.parametres.edit') }}" class="{{ $actif('admin.parametres.*') }}"><x-icon name="settings"/> Paramètres</a>
+                </x-menu-section>
             @endif
         </nav>
 
