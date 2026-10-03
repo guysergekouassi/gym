@@ -5,23 +5,28 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Services\PointageService;
+use App\Support\Badge;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PointageController extends Controller
 {
     /**
-     * POST /api/pointage/empreinte
+     * POST /api/pointage/badge
      * Header : Authorization: Bearer <token du lecteur>
-     * Body   : { "empreinte_id": "123" }
+     * Body   : { "badge_id": "0012345678" }   (ancien nom accepté : empreinte_id)
      */
-    public function empreinte(Request $request, PointageService $pointage): JsonResponse
+    public function badge(Request $request, PointageService $pointage): JsonResponse
     {
+        if (! $request->filled('badge_id') && $request->filled('empreinte_id')) {
+            $request->merge(['badge_id' => $request->input('empreinte_id')]);
+        }
+
         $data = $request->validate([
-            'empreinte_id' => ['required', 'string', 'max:64'],
+            'badge_id' => ['required', 'string', Badge::REGLE],
         ]);
 
-        $passage = $pointage->parEmpreinte($data['empreinte_id'], $request->attributes->get('lecteur'));
+        $passage = $pointage->parBadge($data['badge_id'], $request->attributes->get('lecteur'));
         $passage->load('client');
 
         $client = $passage->client;
@@ -37,7 +42,6 @@ class PointageController extends Controller
                 'id' => $client->id,
                 'nom' => $client->nom_complet,
                 'type' => Client::TYPES[$client->type] ?? $client->type,
-                'photo_url' => $client->photo_url,
             ] : null,
             'abonnement' => $abonnement ? [
                 'formule' => $abonnement->formule->nom,
