@@ -20,14 +20,13 @@
 @endphp
 
 @section('content')
-<div class="mb-5 flex flex-wrap items-end justify-between gap-4">
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
     <div>
         <h1 class="text-3xl font-bold tracking-tight text-slate-900">Tableau de bord</h1>
         <p class="mt-1 text-slate-500">Vue d'ensemble de votre salle de sport</p>
     </div>
+    <x-filtre-periode :periode="$periode" :annees="$annees"/>
 </div>
-
-<x-filtre-periode :periode="$periode" :annees="$annees" class="mb-6"/>
 
 {{-- Chiffres clés de la période choisie --}}
 <div class="mb-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
