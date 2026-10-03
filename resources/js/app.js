@@ -213,3 +213,12 @@ $$('[data-afficher-mdp]').forEach((bouton) => {
         champ.focus();
     });
 });
+
+// --- Bouton qui remplit un champ avec une valeur proposée (ex. n° de pointeuse libre) ---
+$$('[data-remplir]').forEach((bouton) => {
+    bouton.addEventListener('click', () => {
+        const champ = document.getElementById(bouton.dataset.remplir);
+        if (champ) champ.value = bouton.dataset.valeur;
+        bouton.remove();
+    });
+});

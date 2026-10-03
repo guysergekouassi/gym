@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\AccueilController;
 use App\Http\Controllers\Admin\FormuleController;
-use App\Http\Controllers\Admin\LecteurController;
+use App\Http\Controllers\Admin\PointeuseController;
 use App\Http\Controllers\Admin\PaiementController;
 use App\Http\Controllers\Admin\UtilisateurController;
 use App\Http\Controllers\Auth\LoginController;
@@ -47,9 +47,11 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
                 ->parameters(['utilisateurs' => 'utilisateur'])
                 ->except(['show', 'destroy']);
 
-            Route::get('/lecteurs', [LecteurController::class, 'index'])->name('lecteurs.index');
-            Route::post('/lecteurs', [LecteurController::class, 'store'])->name('lecteurs.store');
-            Route::delete('/lecteurs/{lecteur}', [LecteurController::class, 'destroy'])->name('lecteurs.destroy');
+            Route::get('/pointeuses', [PointeuseController::class, 'index'])->name('pointeuses.index');
+            Route::post('/pointeuses', [PointeuseController::class, 'store'])->name('pointeuses.store');
+            Route::post('/pointeuses/{lecteur}/synchroniser', [PointeuseController::class, 'synchroniser'])->name('pointeuses.synchroniser');
+            Route::post('/pointeuses/{lecteur}/reinitialiser-ip', [PointeuseController::class, 'reinitialiserIp'])->name('pointeuses.ip');
+            Route::delete('/pointeuses/{lecteur}', [PointeuseController::class, 'destroy'])->name('pointeuses.destroy');
         });
     });
 

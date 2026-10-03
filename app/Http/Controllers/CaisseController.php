@@ -96,7 +96,7 @@ class CaisseController extends Controller
         }
 
         $clients = Client::query()
-            ->tap(fn ($query) => Recherche::appliquer($query, $q, ['nom', 'prenoms', 'telephone', 'badge_id']))
+            ->tap(fn ($query) => Recherche::appliquer($query, $q, ['nom', 'prenoms', 'telephone', 'empreinte_id']))
             ->orderBy('nom')
             ->limit(10)
             ->get();

@@ -16,7 +16,7 @@ return [
         'expiration_alerte_jours' => (int) env('KPI_ALERTE_EXPIRATION', 7),
     ],
 
-    // Un même client qui badge plusieurs fois dans ce délai = un seul passage
+    // Un même client qui pointe plusieurs fois dans ce délai = un seul passage
     'anti_doublon_secondes' => (int) env('ANTI_DOUBLON_SECONDES', 120),
 
     'impression' => [

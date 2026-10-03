@@ -44,7 +44,7 @@ function afficher(p) {
 
     el('message').textContent = p.autorise ? 'Bienvenue !' : 'Accès refusé';
     el('motif').textContent = p.autorise ? '' : p.message;
-    el('nom').textContent = p.client ? p.client.nom : 'Badge inconnu';
+    el('nom').textContent = p.client ? p.client.nom : 'Empreinte inconnue';
     el('type').textContent = p.client ? p.client.type : '';
 
     if (p.fin_droits) {
@@ -113,7 +113,7 @@ async function envoyerBadge(badge) {
                 'X-Requested-With': 'XMLHttpRequest',
             },
             credentials: 'same-origin',
-            body: JSON.stringify({ badge_id: badge }),
+            body: JSON.stringify({ empreinte_id: badge }),
         });
         if (reponse.status === 401 || reponse.status === 419) { window.location.reload(); return; }
         if (reponse.status === 422) {
@@ -138,7 +138,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         const badge = tampon.trim();
         tampon = '';
-        if (/^[A-Za-z0-9_-]{3,64}$/.test(badge)) envoyerBadge(badge);
+        if (/^[0-9]{1,9}$/.test(badge)) envoyerBadge(badge);
         e.preventDefault();
         return;
     }

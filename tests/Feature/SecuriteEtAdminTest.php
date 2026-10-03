@@ -81,7 +81,7 @@ class SecuriteEtAdminTest extends TestCase
         $paiement = $this->encaisserPassage();
 
         foreach (['/dashboard', '/admin/paiements', '/admin/paiements/export', '/admin/formules',
-            '/admin/utilisateurs', '/admin/utilisateurs/create', '/admin/lecteurs'] as $url) {
+            '/admin/utilisateurs', '/admin/utilisateurs/create', '/admin/pointeuses'] as $url) {
             $this->get($url)->assertForbidden();
         }
 
@@ -108,7 +108,7 @@ class SecuriteEtAdminTest extends TestCase
 
     public function test_annulation_dun_abonnement_par_ladmin(): void
     {
-        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Konan', 'badge_id' => '42']);
+        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Konan', 'empreinte_id' => '42']);
         $this->actingAs($this->caissiere)->post('/caisse/abonnement', [
             'client_id' => $client->id, 'formule_id' => Formule::where('nom', 'Mensuel')->value('id'), 'mode' => 'especes',
         ]);
@@ -124,8 +124,8 @@ class SecuriteEtAdminTest extends TestCase
         $this->assertSame(Abonnement::STATUT_ANNULE, $paiement->abonnement->statut);
         $this->assertNull($client->fresh()->finDesDroits());
 
-        // Le badge est refusé et la recette du jour exclut le ticket annulé
-        $this->post('/accueil/scan', ['badge_id' => '42'])->assertJson(['autorise' => false]);
+        // L'empreinte est refusée et la recette du jour exclut le ticket annulé
+        $this->post('/accueil/scan', ['empreinte_id' => '42'])->assertJson(['autorise' => false]);
         $this->get('/dashboard')->assertViewHas('jour', fn ($j) => $j['recette_abonnements'] === 0);
 
         // Double annulation impossible
@@ -133,11 +133,11 @@ class SecuriteEtAdminTest extends TestCase
             ->assertSessionHas('erreur');
     }
 
-    public function test_scan_badge_usb_depuis_lecran_daccueil(): void
+    public function test_saisie_manuelle_depuis_lecran_daccueil(): void
     {
-        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Aka', 'badge_id' => '0012345678']);
+        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Aka', 'empreinte_id' => '12345678']);
 
-        $this->actingAs($this->caissiere)->postJson('/accueil/scan', ['badge_id' => '0012345678'])
+        $this->actingAs($this->caissiere)->postJson('/accueil/scan', ['empreinte_id' => '12345678'])
             ->assertOk()->assertJson(['autorise' => false, 'message' => 'Abonnement expiré ou inexistant']);
 
         Abonnement::create([
@@ -145,11 +145,11 @@ class SecuriteEtAdminTest extends TestCase
             'date_fin' => today()->addDays(29), 'montant' => 1, 'statut' => Abonnement::STATUT_ACTIF,
         ]);
 
-        $this->postJson('/accueil/scan', ['badge_id' => '0012345678'])
+        $this->postJson('/accueil/scan', ['empreinte_id' => '12345678'])
             ->assertOk()->assertJson(['autorise' => true, 'client' => ['nom' => 'Aka']]);
-        $this->assertDatabaseHas('passages', ['client_id' => $client->id, 'methode' => Passage::METHODE_BADGE, 'user_id' => $this->caissiere->id]);
+        $this->assertDatabaseHas('passages', ['client_id' => $client->id, 'methode' => Passage::METHODE_EMPREINTE, 'user_id' => $this->caissiere->id]);
 
-        $this->postJson('/accueil/scan', ['badge_id' => '<script>'])->assertUnprocessable();
+        $this->postJson('/accueil/scan', ['empreinte_id' => '<script>'])->assertUnprocessable();
     }
 
     public function test_entetes_de_securite_presents(): void
@@ -228,13 +228,13 @@ class SecuriteEtAdminTest extends TestCase
         $this->assertTrue($this->admin->fresh()->isAdmin());
     }
 
-    public function test_archiver_un_client_libere_son_badge(): void
+    public function test_archiver_un_client_libere_son_numero(): void
     {
-        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Parti', 'badge_id' => '77']);
+        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Parti', 'empreinte_id' => '77']);
 
         $this->actingAs($this->admin)->delete("/clients/{$client->id}")->assertRedirect();
 
-        $this->post('/clients', ['type' => Client::TYPE_ABONNE, 'nom' => 'Nouveau', 'badge_id' => '77'])->assertSessionHasNoErrors();
+        $this->post('/clients', ['type' => Client::TYPE_ABONNE, 'nom' => 'Nouveau', 'empreinte_id' => '77'])->assertSessionHasNoErrors();
         $this->actingAs($this->caissiere)->post('/caisse/abonnement', [
             'client_id' => $client->id, 'formule_id' => Formule::value('id'), 'mode' => 'especes',
         ])->assertSessionHasErrors('client_id');

@@ -3,9 +3,8 @@
 use App\Http\Controllers\Api\PointageController;
 use Illuminate\Support\Facades\Route;
 
-// Appelé par le boîtier de badge en réseau (ou un agent local) avec son token
+// API générique avec token (agent local, autre appareil). La pointeuse ZKTeco,
+// elle, passe par le protocole Cloud/ADMS : voir routes/pointeuse.php
 Route::middleware(['throttle:120,1', 'lecteur'])->group(function () {
-    Route::post('/pointage/badge', [PointageController::class, 'badge'])->name('api.pointage.badge');
-    // Ancienne URL, conservée pour les appareils déjà configurés
-    Route::post('/pointage/empreinte', [PointageController::class, 'badge']);
+    Route::post('/pointage/empreinte', [PointageController::class, 'empreinte'])->name('api.pointage.empreinte');
 });

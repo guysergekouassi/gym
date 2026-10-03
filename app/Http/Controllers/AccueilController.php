@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\Passage;
 use App\Services\PointageService;
-use App\Support\Badge;
+use App\Support\Empreinte;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-/** Écran affiché à l'entrée : montre la fiche du client qui vient de badger. */
+/** Écran affiché à l'entrée : montre la fiche du client qui vient de pointer. */
 class AccueilController extends Controller
 {
     public function index(): View
@@ -26,16 +26,16 @@ class AccueilController extends Controller
     }
 
     /**
-     * Lecteur de badge USB branché sur le poste d'accueil : il "tape" le numéro
-     * du badge suivi d'Entrée, capté par l'écran d'accueil puis envoyé ici.
+     * Secours si la pointeuse est en panne : la caissière tape le n° du membre
+     * puis Entrée sur l'écran d'accueil.
      */
     public function scan(Request $request, PointageService $pointage): JsonResponse
     {
         $data = $request->validate([
-            'badge_id' => ['required', 'string', Badge::REGLE],
+            'empreinte_id' => ['required', 'string', Empreinte::REGLE],
         ]);
 
-        $passage = $pointage->parBadge($data['badge_id'], null, $request->user());
+        $passage = $pointage->parEmpreinte($data['empreinte_id'], null, $request->user());
         $passage->load('client');
 
         return response()->json($this->presenter($passage));

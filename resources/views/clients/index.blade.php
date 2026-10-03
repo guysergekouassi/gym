@@ -14,7 +14,7 @@
 <form method="GET" class="card mb-6 flex flex-wrap items-end gap-3 p-4">
     <div class="relative min-w-60 flex-1">
         <x-icon name="search" class="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-slate-400"/>
-        <input type="search" name="q" value="{{ request('q') }}" maxlength="100" placeholder="Nom, téléphone ou n° de badge" class="input pl-11">
+        <input type="search" name="q" value="{{ request('q') }}" maxlength="100" placeholder="Nom, téléphone ou n° d'empreinte" class="input pl-11">
     </div>
     <select name="type" class="input w-auto">
         <option value="">Tous les types</option>
@@ -37,7 +37,7 @@
     <div class="overflow-x-auto">
         <table class="table">
             <thead>
-            <tr><th>Client</th><th>Type</th><th>Badge</th><th>Abonnement</th><th>Dernière venue</th><th></th></tr>
+            <tr><th>Client</th><th>Type</th><th>Empreinte</th><th>Abonnement</th><th>Dernière venue</th><th></th></tr>
             </thead>
             <tbody>
             @forelse($clients as $client)
@@ -53,7 +53,7 @@
                         </a>
                     </td>
                     <td><span class="{{ $client->type === Client::TYPE_ABONNE ? 'pill-blue' : 'pill-gray' }}">{{ Client::TYPES[$client->type] ?? $client->type }}</span></td>
-                    <td class="font-mono text-xs">{{ $client->badge_id ?? '—' }}</td>
+                    <td class="font-mono text-xs">{{ $client->empreinte_id ?? '—' }}</td>
                     <td>
                         @if($fin && $fin->gte(today()))
                             <span class="pill-green">Jusqu'au {{ $fin->format('d/m/Y') }}</span>
