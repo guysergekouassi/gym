@@ -50,6 +50,23 @@ class UtilisateurController extends Controller
         return view('admin.utilisateurs.form', ['utilisateur' => $utilisateur]);
     }
 
+    /** Suppression d'un compte qui n'a jamais encaissé (sinon : désactiver, pour garder l'historique). */
+    public function supprimer(Request $request, User $utilisateur): RedirectResponse
+    {
+        if ($utilisateur->is($request->user())) {
+            return back()->with('erreur', 'Vous ne pouvez pas supprimer votre propre compte.');
+        }
+        if (\App\Models\Paiement::where('user_id', $utilisateur->id)->exists()) {
+            return back()->with('erreur', "{$utilisateur->name} a déjà encaissé : désactivez le compte (Modifier) pour garder l'historique de caisse.");
+        }
+
+        Sessions::revoquer($utilisateur);
+        $utilisateur->delete();
+        Log::notice('Compte supprimé', ['id' => $utilisateur->id, 'par' => $request->user()->id]);
+
+        return redirect()->route('admin.utilisateurs.index')->with('succes', "Compte de {$utilisateur->name} supprimé.");
+    }
+
     public function update(Request $request, User $utilisateur): RedirectResponse
     {
         $data = $request->validate([

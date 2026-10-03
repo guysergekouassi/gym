@@ -32,9 +32,9 @@
             <a href="{{ route('caisse.index', ['client_id' => $client->id]) }}" class="btn-primary"><x-icon name="card" class="size-4"/> Abonner / renouveler</a>
             <a href="{{ route('clients.edit', $client) }}" class="btn-light"><x-icon name="pencil" class="size-4"/> Modifier</a>
             @if(auth()->user()->isAdmin())
-                <form method="POST" action="{{ route('clients.destroy', $client) }}" data-confirm="Archiver {{ $client->nom_complet }} ? Son badge sera libéré.">
+                <form method="POST" action="{{ route('clients.destroy', $client) }}" data-confirm="Masquer {{ $client->nom_complet }} ? Il disparaît de la liste et de la pointeuse (réversible).">
                     @csrf @method('DELETE')
-                    <button type="submit" class="btn-danger"><x-icon name="archive" class="size-4"/> Archiver</button>
+                    <button type="submit" class="btn-danger"><x-icon name="archive" class="size-4"/> Masquer</button>
                 </form>
             @endif
         </div>

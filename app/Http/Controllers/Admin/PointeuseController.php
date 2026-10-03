@@ -87,6 +87,16 @@ class PointeuseController extends Controller
         return back()->with('succes', "« {$lecteur->nom} » est désactivée.");
     }
 
+    /** Suppression définitive (les passages déjà enregistrés sont conservés). */
+    public function supprimer(Lecteur $lecteur): RedirectResponse
+    {
+        $nom = $lecteur->nom;
+        $lecteur->delete();
+        Log::notice('Pointeuse supprimée', ['lecteur' => $nom, 'par' => auth()->id()]);
+
+        return redirect()->route('admin.pointeuses.index')->with('succes', "Pointeuse « {$nom} » supprimée.");
+    }
+
     private function valider(Request $request, ?Lecteur $lecteur): array
     {
         return $request->validate([

@@ -38,6 +38,9 @@
             <option value="expire_bientot" @selected(request('statut') === 'expire_bientot')>Expire bientôt</option>
             <option value="expire" @selected(request('statut') === 'expire')>Expiré</option>
             <option value="a_relancer" @selected(request('statut') === 'a_relancer')>À relancer (absents {{ config('salle.kpi.inactif_jours') }} j)</option>
+            @if(auth()->user()->isAdmin())
+                <option value="masques" @selected(request('statut') === 'masques')>Masqués ({{ $nombreMasques }})</option>
+            @endif
         </select>
         <button type="submit" class="btn-dark py-2">Filtrer</button>
     </form>
@@ -47,7 +50,7 @@
     <div class="overflow-x-auto">
         <table class="table">
             <thead>
-            <tr><th>Client</th><th>Type</th><th>Téléphone</th><th>Formule</th><th>Expiration</th><th>Dernière visite</th><th>Statut</th></tr>
+            <tr><th>Client</th><th>Type</th><th>Téléphone</th><th>Formule</th><th>Expiration</th><th>Dernière visite</th><th>Statut</th>@if(auth()->user()->isAdmin())<th class="text-right">Actions</th>@endif</tr>
             </thead>
             <tbody>
             @forelse($clients as $client)
@@ -57,7 +60,7 @@
                 @endphp
                 <tr>
                     <td>
-                        <a href="{{ route('clients.show', $client) }}" class="flex items-center gap-3">
+                        <a @unless($masques) href="{{ route('clients.show', $client) }}" @endunless class="flex items-center gap-3">
                             <x-avatar :client="$client" size="size-9" text="text-xs"/>
                             <span>
                                 <span class="block font-semibold text-slate-900">{{ $client->nom_complet }}</span>
@@ -71,13 +74,32 @@
                     <td class="text-slate-600">{{ $fin?->format('d/m/Y') ?? '—' }}</td>
                     <td class="text-slate-600">{{ $client->dernier_passage_le ? Carbon::parse($client->dernier_passage_le)->format('d/m/Y') : 'Jamais' }}</td>
                     <td>
-                        @if($enRegle)<span class="pill-green"><x-icon name="check" class="size-3"/> Actif</span>
+                        @if($masques)<span class="pill-gray">Masqué</span>
+                        @elseif($enRegle)<span class="pill-green"><x-icon name="check" class="size-3"/> Actif</span>
                         @elseif($client->type === Client::TYPE_ABONNE)<span class="pill-red"><x-icon name="x" class="size-3"/> Expiré</span>
                         @else<span class="pill-blue">Passage</span>@endif
                     </td>
+                    @if(auth()->user()->isAdmin())
+                        <td>
+                            <div class="flex justify-end gap-1.5">
+                                @if($masques)
+                                    <form method="POST" action="{{ route('clients.restaurer', $client->id) }}">@csrf
+                                        <button type="submit" class="btn-light btn-sm"><x-icon name="refresh" class="size-3.5"/> Réafficher</button>
+                                    </form>
+                                @else
+                                    <form method="POST" action="{{ route('clients.destroy', $client) }}" data-confirm="Masquer {{ $client->nom_complet }} ? Il disparaît de la liste et de la pointeuse, mais reste dans l'historique de caisse.">@csrf @method('DELETE')
+                                        <button type="submit" class="btn-light btn-sm" title="Masquer (réversible)"><x-icon name="archive" class="size-3.5"/> Masquer</button>
+                                    </form>
+                                @endif
+                                <form method="POST" action="{{ route('clients.supprimer', $client->id) }}" data-confirm="Supprimer DÉFINITIVEMENT {{ $client->nom_complet }} ? Impossible à annuler. (Refusé s'il a des paiements.)">@csrf @method('DELETE')
+                                    <button type="submit" class="btn-danger btn-sm" title="Supprimer définitivement" aria-label="Supprimer définitivement"><x-icon name="x" class="size-3.5"/></button>
+                                </form>
+                            </div>
+                        </td>
+                    @endif
                 </tr>
             @empty
-                <tr><td colspan="7" class="py-12 text-center text-slate-400">Aucun client ne correspond.</td></tr>
+                <tr><td colspan="8" class="py-12 text-center text-slate-400">Aucun client ne correspond.</td></tr>
             @endforelse
             </tbody>
         </table>

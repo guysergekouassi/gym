@@ -32,8 +32,10 @@
                         <div class="sm:col-span-2">
                             <button type="submit" class="btn-light w-full">Enregistrer</button>
                         </div>
-                        <p class="text-xs text-slate-500 sm:col-span-12">{{ $formule->abonnes_en_cours }} abonnement(s) en cours sur cette formule{{ $formule->actif ? '' : ' · formule masquée à la caisse' }}</p>
+                        <p class="flex items-center justify-between gap-3 text-xs text-slate-500 sm:col-span-12"><span>{{ $formule->abonnes_en_cours }} abonnement(s) en cours sur cette formule{{ $formule->actif ? '' : ' · formule masquée à la caisse' }}</span>
+                            <button type="submit" form="supprimer-formule-{{ $formule->id }}" class="font-semibold text-red-600 hover:underline">Supprimer</button></p>
                     </form>
+                    <form id="supprimer-formule-{{ $formule->id }}" method="POST" action="{{ route('admin.formules.destroy', $formule) }}" data-confirm="Supprimer la formule « {{ $formule->nom }} » ? (Refusé si elle a déjà été vendue.)" hidden>@csrf @method('DELETE')</form>
                 @empty
                     <p class="px-5 py-8 text-center text-sm text-slate-400">Aucune formule.</p>
                 @endforelse
