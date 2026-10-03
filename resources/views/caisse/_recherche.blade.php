@@ -6,7 +6,7 @@
         <div class="relative">
             <x-icon name="search" class="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-slate-400"/>
             <input type="search" data-client-q autocomplete="off" maxlength="100"
-                   placeholder="{{ $requis ? 'Rechercher le client : nom, téléphone ou n° badge' : 'Client existant (facultatif) : nom, téléphone…' }}"
+                   placeholder="{{ $requis ? 'Rechercher le client : nom, téléphone ou n° empreinte' : 'Client existant (facultatif) : nom, téléphone…' }}"
                    class="input py-3 pl-11">
         </div>
     </div>

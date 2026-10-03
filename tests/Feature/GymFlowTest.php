@@ -36,9 +36,9 @@ class GymFlowTest extends TestCase
         [, $this->token] = Lecteur::creerAvecToken('Test');
     }
 
-    private function scanner(string $badgeId)
+    private function scanner(string $empreinteId)
     {
-        return $this->withToken($this->token)->postJson('/api/pointage/badge', ['badge_id' => $badgeId]);
+        return $this->withToken($this->token)->postJson('/api/pointage/empreinte', ['empreinte_id' => $empreinteId]);
     }
 
     public function test_connexion_et_redirection_selon_le_role(): void
@@ -67,7 +67,7 @@ class GymFlowTest extends TestCase
 
     public function test_toutes_les_pages_saffichent(): void
     {
-        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Kouassi', 'prenoms' => 'Guy', 'badge_id' => '1']);
+        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Kouassi', 'prenoms' => 'Guy', 'empreinte_id' => '1']);
 
         $this->actingAs($this->admin)->post('/caisse/abonnement', [
             'client_id' => $client->id,
@@ -80,14 +80,14 @@ class GymFlowTest extends TestCase
             "/clients/{$client->id}", "/clients/{$client->id}/edit", '/accueil', '/accueil/dernier',
             "/recus/{$paiement->numero_recu}", '/mot-de-passe', '/admin/paiements', '/admin/formules',
             '/admin/utilisateurs', '/admin/utilisateurs/create', "/admin/utilisateurs/{$this->caissiere->id}/edit",
-            '/admin/lecteurs'] as $url) {
+            '/admin/pointeuses'] as $url) {
             $this->get($url)->assertOk();
         }
     }
 
     public function test_abonnement_puis_scan_autorise(): void
     {
-        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Yao', 'badge_id' => '7']);
+        $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Yao', 'empreinte_id' => '7']);
 
         $this->scanner('7')->assertOk()->assertJson(['autorise' => false, 'motif' => 'abonnement_expire']);
 
@@ -142,7 +142,7 @@ class GymFlowTest extends TestCase
 
     public function test_journalier_enrole_doit_payer_avant_de_scanner(): void
     {
-        $client = Client::create(['type' => Client::TYPE_JOURNALIER, 'nom' => 'Bamba', 'badge_id' => '9']);
+        $client = Client::create(['type' => Client::TYPE_JOURNALIER, 'nom' => 'Bamba', 'empreinte_id' => '9']);
 
         $this->scanner('9')->assertJson(['autorise' => false, 'motif' => 'paiement_requis']);
 
@@ -153,16 +153,12 @@ class GymFlowTest extends TestCase
         $this->scanner('9')->assertJson(['autorise' => true]);
     }
 
-    public function test_badge_inconnu_et_token_invalide(): void
+    public function test_empreinte_inconnue_et_token_invalide(): void
     {
-        $this->scanner('999')->assertJson(['autorise' => false, 'motif' => 'badge_inconnu']);
-        $this->withToken('mauvais')->postJson('/api/pointage/badge', ['badge_id' => '1'])->assertUnauthorized();
-        $this->postJson('/api/pointage/badge', ['badge_id' => '1'])->assertUnauthorized();
+        $this->scanner('999')->assertJson(['autorise' => false, 'motif' => 'empreinte_inconnue']);
+        $this->withToken('mauvais')->postJson('/api/pointage/empreinte', ['empreinte_id' => '1'])->assertUnauthorized();
+        $this->postJson('/api/pointage/empreinte', ['empreinte_id' => '1'])->assertUnauthorized();
         $this->scanner("1' OR '1'='1")->assertUnprocessable();
-
-        // Ancienne URL / ancien nom de champ toujours acceptés
-        $this->withToken($this->token)->postJson('/api/pointage/empreinte', ['empreinte_id' => '999'])
-            ->assertOk()->assertJson(['motif' => 'badge_inconnu']);
     }
 
     public function test_kpi_actifs_moins_actifs_et_renouvellements(): void
@@ -174,7 +170,7 @@ class GymFlowTest extends TestCase
             'statut' => Abonnement::STATUT_ACTIF, 'est_renouvellement' => $renouv,
         ]);
 
-        $assidu = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Assidu', 'badge_id' => '1']);
+        $assidu = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Assidu', 'empreinte_id' => '1']);
         $absent = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Absent']);
         $fidele = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Fidèle']);
 

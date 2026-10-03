@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 class Lecteur extends Model
 {
-    protected $fillable = ['nom', 'token_hash', 'actif', 'derniere_activite_at'];
+    protected $fillable = ['nom', 'numero_serie', 'adresse_ip', 'token_hash', 'actif', 'derniere_activite_at', 'stamp_pointages'];
 
     protected $hidden = ['token_hash'];
 
@@ -23,6 +23,22 @@ class Lecteur extends Model
     public function passages(): HasMany
     {
         return $this->hasMany(Passage::class);
+    }
+
+    public function commandes(): HasMany
+    {
+        return $this->hasMany(CommandePointeuse::class);
+    }
+
+    /** Pointeuses en réseau joignables par le protocole Cloud (ADMS). */
+    public function scopePointeuses($query): void
+    {
+        $query->where('actif', true)->whereNotNull('numero_serie');
+    }
+
+    public function estEnLigne(): bool
+    {
+        return $this->derniere_activite_at !== null && $this->derniere_activite_at->gt(now()->subMinutes(2));
     }
 
     /**

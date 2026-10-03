@@ -33,7 +33,7 @@
                 <span class="absolute inset-6 rounded-full bg-brand-500/10 ring-1 ring-brand-400/30"></span>
                 <x-icon name="card" class="relative size-24 text-brand-400"/>
             </div>
-            <p class="text-5xl font-bold tracking-tight">Passez votre badge</p>
+            <p class="text-5xl font-bold tracking-tight">Posez votre doigt</p>
             <p class="mt-4 text-xl text-slate-400">sur le lecteur pour entrer</p>
         </div>
 

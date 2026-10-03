@@ -7,7 +7,7 @@
 
 @section('content')
 <x-page-header :title="$client->exists ? 'Modifier '.$client->nom_complet : 'Nouveau client'"
-               subtitle="Les champs marqués * sont obligatoires. Le badge peut être attribué plus tard."/>
+               subtitle="Les champs marqués * sont obligatoires. Le n° de pointeuse peut être attribué plus tard."/>
 
 <form method="POST" enctype="multipart/form-data"
       action="{{ $client->exists ? route('clients.update', $client) : route('clients.store') }}"
@@ -72,9 +72,12 @@
                     </div>
                 </fieldset>
                 <div>
-                    <label for="badge_id" class="label">N° de badge</label>
-                    <input id="badge_id" data-no-enter type="text" name="badge_id" maxlength="64" value="{{ old('badge_id', $client->badge_id) }}" class="input font-mono" placeholder="Passez le badge sur le lecteur USB">
-                    <p class="hint">Cliquez dans le champ puis passez le badge sur le lecteur : le numéro s'inscrit tout seul.</p>
+                    <label for="empreinte_id" class="label">N° sur la pointeuse</label>
+                    <input id="empreinte_id" data-no-enter type="text" name="empreinte_id" maxlength="9" inputmode="numeric" value="{{ old('empreinte_id', $client->empreinte_id) }}" class="input font-mono" placeholder="ex. {{ $numeroSuggere }}">
+                    @if(! $client->empreinte_id)
+                        <button type="button" class="mt-2 btn-light btn-sm" data-remplir="empreinte_id" data-valeur="{{ $numeroSuggere }}">Attribuer le n° {{ $numeroSuggere }}</button>
+                    @endif
+                    <p class="hint">Ce n° sera envoyé à la pointeuse avec le nom du client. Enregistrez ensuite son doigt sur la pointeuse (Menu → Utilisateurs → ce n° → Empreinte).</p>
                 </div>
             </div>
         </div>
@@ -87,7 +90,7 @@
                 @endif
                 <div class="min-w-0 flex-1">
                     <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-semibold hover:file:bg-slate-200">
-                    <p class="hint">JPG, PNG ou WebP · 2 Mo max. Affichée à l'accueil quand le client badge.</p>
+                    <p class="hint">JPG, PNG ou WebP · 2 Mo max. Affichée à l'accueil quand le client pointe.</p>
                 </div>
             </div>
         </div>

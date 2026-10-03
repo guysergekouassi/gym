@@ -40,7 +40,7 @@
                 <p class="nav-section">Administration</p>
                 <a href="{{ route('admin.formules.index') }}" class="{{ $actif('admin.formules.*') }}"><x-icon name="tag"/> Formules &amp; tarifs</a>
                 <a href="{{ route('admin.utilisateurs.index') }}" class="{{ $actif('admin.utilisateurs.*') }}"><x-icon name="shield"/> Utilisateurs</a>
-                <a href="{{ route('admin.lecteurs.index') }}" class="{{ $actif('admin.lecteurs.*') }}"><x-icon name="signal"/> Lecteurs de badge</a>
+                <a href="{{ route('admin.pointeuses.index') }}" class="{{ $actif('admin.pointeuses.*') }}"><x-icon name="signal"/> Pointeuses</a>
             @endif
         </nav>
 
