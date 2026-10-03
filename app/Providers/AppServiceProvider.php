@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Parametre;
 use App\Services\KpiService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
@@ -20,6 +21,13 @@ class AppServiceProvider extends ServiceProvider
     {
         // Mots de passe : 10 caractères minimum, majuscules, minuscules et chiffres
         Password::defaults(fn () => Password::min(10)->letters()->mixedCase()->numbers());
+
+        // Nom, adresse, téléphone, e-mail de la salle : réglés par l'admin dans « Paramètres »
+        try {
+            Parametre::appliquerALaConfig();
+        } catch (\Throwable) {
+            // Base pas encore migrée (installation) : on garde les valeurs du .env
+        }
 
         // Cloche de la barre du haut : abonnements qui expirent bientôt
         View::composer('layouts.app', function ($view) {

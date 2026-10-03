@@ -2,9 +2,13 @@
 
 return [
 
-    'nom' => env('SALLE_NOM', 'GymFlow'),
+    'nom' => env('SALLE_NOM', 'Gym'),
     'adresse' => env('SALLE_ADRESSE', "Abidjan, Côte d'Ivoire"),
     'telephone' => env('SALLE_TELEPHONE', ''),
+    'email' => env('SALLE_EMAIL', ''),
+    'message_recu' => env('SALLE_MESSAGE_RECU', 'Merci et bonne séance !'),
+
+    // Ces valeurs sont modifiables par l'admin (page Paramètres), qui les remplace.
 
     // Tarif initial d'une entrée journalière (FCFA) — ensuite modifiable par l'admin dans l'application
     'tarif_journalier' => (int) env('SALLE_TARIF_JOURNALIER', 2000),

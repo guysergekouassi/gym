@@ -46,6 +46,7 @@
     <div class="centre titre">{{ config('salle.nom') }}</div>
     <div class="centre">{{ config('salle.adresse') }}</div>
     @if(config('salle.telephone'))<div class="centre">Tél : {{ config('salle.telephone') }}</div>@endif
+    @if(config('salle.email'))<div class="centre">{{ config('salle.email') }}</div>@endif
     <div class="sep"></div>
 
     @if($paiement->estAnnule())
@@ -70,7 +71,7 @@
     <div class="montant">{{ Fcfa::format($paiement->montant) }}</div>
     <div class="centre">Caisse : {{ $paiement->user?->name ?? '—' }}</div>
     <div class="sep"></div>
-    <div class="centre">Merci et bonne séance !</div>
+    <div class="centre">{{ config('salle.message_recu') ?: 'Merci et bonne séance !' }}</div>
     <div class="centre" style="font-size:.85em;margin-top:4px">Ticket à conserver</div>
 </div>
 
