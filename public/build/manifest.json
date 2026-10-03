@@ -1,0 +1,23 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-Doy-GDDM.css",
+    "name": "app",
+    "names": [
+      "app.css"
+    ],
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/accueil.js": {
+    "file": "assets/accueil-CgfxOeJc.js",
+    "name": "accueil",
+    "src": "resources/js/accueil.js",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-BxiwxxOt.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  }
+}

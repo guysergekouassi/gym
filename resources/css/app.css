@@ -1,9 +1,71 @@
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+@source '../views';
+@source '../js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+    /* Couleur de marque : orange énergique */
+    --color-brand-50: #fff7ed;
+    --color-brand-100: #ffedd5;
+    --color-brand-200: #fed7aa;
+    --color-brand-300: #fdba74;
+    --color-brand-400: #fb923c;
+    --color-brand-500: #f97316;
+    --color-brand-600: #ea580c;
+    --color-brand-700: #c2410c;
+    --color-brand-800: #9a3412;
+    --color-brand-900: #7c2d12;
+
+    --color-ink-950: #0b0f19;
+    --color-ink-900: #111827;
+    --color-ink-800: #1b2333;
+}
+
+@layer base {
+    html { -webkit-font-smoothing: antialiased; }
+    body { @apply bg-slate-100 text-slate-800; }
+    [x-cloak], [hidden] { display: none !important; }
+    :focus-visible { @apply outline-2 outline-offset-2 outline-brand-500; }
+}
+
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
+        disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer; }
+@utility btn-primary { @apply btn bg-brand-500 text-white shadow-sm shadow-brand-500/30 hover:bg-brand-600; }
+@utility btn-dark { @apply btn bg-ink-900 text-white hover:bg-ink-800; }
+@utility btn-success { @apply btn bg-emerald-600 text-white hover:bg-emerald-700; }
+@utility btn-light { @apply btn bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50; }
+@utility btn-danger { @apply btn bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100; }
+@utility btn-lg { @apply px-5 py-3.5 text-base; }
+@utility btn-sm { @apply px-3 py-1.5 text-xs rounded-lg; }
+@utility pill { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold; }
+@utility pill-green { @apply pill bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20; }
+@utility pill-red { @apply pill bg-red-50 text-red-700 ring-1 ring-red-600/20; }
+@utility pill-amber { @apply pill bg-amber-50 text-amber-700 ring-1 ring-amber-600/20; }
+@utility pill-blue { @apply pill bg-sky-50 text-sky-700 ring-1 ring-sky-600/20; }
+@utility pill-gray { @apply pill bg-slate-100 text-slate-600 ring-1 ring-slate-500/20; }
+@utility pill-brand { @apply pill bg-brand-50 text-brand-700 ring-1 ring-brand-600/20; }
+
+@layer components {
+    .card { @apply rounded-2xl bg-white shadow-sm ring-1 ring-slate-900/5; }
+    .card-header { @apply flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4; }
+    .card-title { @apply text-base font-semibold text-slate-900; }
+    .card-body { @apply p-5; }
+    .label { @apply mb-1.5 block text-sm font-medium text-slate-700; }
+    .input { @apply block w-full rounded-xl border-0 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm ring-1 ring-slate-200
+        placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500 focus:outline-none; }
+    .hint { @apply mt-1 text-xs text-slate-500; }
+    .table { @apply w-full text-left text-sm; }
+    .table thead th { @apply bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500; }
+    .table tbody td { @apply border-t border-slate-100 px-4 py-3 align-middle; }
+    .table tbody tr { @apply hover:bg-slate-50/70; }
+    .link { @apply font-medium text-brand-600 hover:text-brand-700 hover:underline; }
+    .nav-link { @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition hover:bg-white/5 hover:text-white; }
+    .nav-link.active { @apply bg-brand-500/15 text-brand-300; }
+    .nav-section { @apply mt-6 mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500; }
+    .choice { @apply relative flex cursor-pointer flex-col rounded-xl bg-white p-3.5 ring-1 ring-slate-200 transition hover:ring-brand-300; }
+    .choice:has(input:checked) { @apply bg-brand-50 ring-2 ring-brand-500; }
+    .choice input { @apply sr-only; }
 }
