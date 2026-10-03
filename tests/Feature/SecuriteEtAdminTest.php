@@ -126,7 +126,7 @@ class SecuriteEtAdminTest extends TestCase
 
         // L'empreinte est refusée et la recette du jour exclut le ticket annulé
         $this->post('/accueil/scan', ['empreinte_id' => '42'])->assertJson(['autorise' => false]);
-        $this->get('/dashboard')->assertViewHas('jour', fn ($j) => $j['recette_abonnements'] === 0);
+        $this->get('/dashboard')->assertViewHas('chiffres', fn ($c) => $c['recette'] === 0);
 
         // Double annulation impossible
         $this->post("/admin/paiements/{$paiement->numero_recu}/annuler", ['motif' => 'Encore une fois'])

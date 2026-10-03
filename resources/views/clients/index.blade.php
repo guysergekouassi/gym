@@ -37,6 +37,7 @@
             <option value="en_regle" @selected(request('statut') === 'en_regle')>En règle</option>
             <option value="expire_bientot" @selected(request('statut') === 'expire_bientot')>Expire bientôt</option>
             <option value="expire" @selected(request('statut') === 'expire')>Expiré</option>
+            <option value="a_relancer" @selected(request('statut') === 'a_relancer')>À relancer (absents {{ config('salle.kpi.inactif_jours') }} j)</option>
         </select>
         <button type="submit" class="btn-dark py-2">Filtrer</button>
     </form>

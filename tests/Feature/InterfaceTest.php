@@ -97,7 +97,7 @@ class InterfaceTest extends TestCase
         $this->actingAs($this->caissiere)->post('/caisse/journalier', ['mode' => 'especes']);
 
         $this->actingAs($this->admin)->get('/dashboard')->assertOk()
-            ->assertViewHas('recettes', fn ($r) => count($r) === 7 && end($r)['journalier'] > 0)
+            ->assertViewHas('serie', fn ($r) => count($r['etiquettes']) === 7 && end($r['journalier']) > 0)
             ->assertViewHas('repartition')
             ->assertSee('Évolution des revenus')
             ->assertSee('Répartition des clients');

@@ -9,6 +9,7 @@ use App\Models\Passage;
 use Carbon\CarbonInterface;
 use App\Models\Formule;
 use App\Models\User;
+use App\Support\Periode;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -210,23 +211,98 @@ class KpiService
         ];
     }
 
-    /** Clients : abonnés en règle / abonnés expirés / journaliers. */
-    public function repartitionClients(): array
+    /** Chiffres clés d'une période (et non plus seulement du jour). */
+    public function chiffresPeriode(Periode $p): array
     {
-        $enRegle = $this->nombreAbonnementsEnCours();
-        $abonnes = Client::abonnes()->count();
+        $bornes = [$p->du->startOfDay(), $p->au->endOfDay()];
+        $paiements = Paiement::valides()->whereBetween('created_at', $bornes)->get(['montant']);
 
         return [
-            ['libelle' => 'Abonnés en règle', 'valeur' => $enRegle],
-            ['libelle' => 'Abonnés expirés', 'valeur' => max(0, $abonnes - $enRegle)],
-            ['libelle' => 'Journaliers', 'valeur' => Client::journaliers()->count()],
+            'clients_inscrits' => Client::whereBetween('created_at', $bornes)->count(),
+            'recette' => (int) $paiements->sum('montant'),
+            'tickets' => $paiements->count(),
+            'entrees' => Passage::whereBetween('passe_le', $bornes)->where('statut', Passage::STATUT_AUTORISE)->count(),
+            'abonnements_actifs' => Client::abonnes()
+                ->whereHas('abonnements', fn ($q) => $q->enCours($p->dateReference()))->count(),
         ];
     }
 
-    /** Formules les plus vendues (abonnements en cours). */
-    public function topFormules(int $limite = 5): Collection
+    /**
+     * Recettes de la période, abonnements et passages séparés.
+     * Un jour choisi → les 7 jours qui finissent ce jour-là ; jusqu'à 62 jours → par jour ; au-delà → par mois.
+     *
+     * @return array{etiquettes: list<string>, abonnement: list<int>, journalier: list<int>, titre: string}
+     */
+    public function serieRecettes(Periode $p): array
     {
-        return Formule::withCount(['abonnements as en_cours' => fn ($q) => $q->enCours()])
+        $du = $p->granularite === 'jour' ? $p->du->subDays(6) : $p->du;
+        $au = $p->au;
+        $parMois = $du->diffInDays($au) > 62;
+
+        $paiements = Paiement::valides()
+            ->whereBetween('created_at', [$du->startOfDay(), $au->endOfDay()])
+            ->get(['type', 'montant', 'created_at']);
+
+        $cases = [];
+        for ($d = $parMois ? $du->startOfMonth() : $du; $d->lte($au); $d = $parMois ? $d->addMonthNoOverflow() : $d->addDay()) {
+            $cle = $d->format($parMois ? 'Y-m' : 'Y-m-d');
+            $cases[$cle] = [
+                'etiquette' => $parMois ? mb_substr(Periode::MOIS[$d->month], 0, 4).($du->year !== $au->year ? ' '.$d->format('y') : '') : $d->format('d/m'),
+                Paiement::TYPE_ABONNEMENT => 0,
+                Paiement::TYPE_JOURNALIER => 0,
+            ];
+        }
+
+        foreach ($paiements as $paiement) {
+            $cle = $paiement->created_at->format($parMois ? 'Y-m' : 'Y-m-d');
+            if (isset($cases[$cle][$paiement->type])) {
+                $cases[$cle][$paiement->type] += $paiement->montant;
+            }
+        }
+
+        return [
+            'etiquettes' => array_values(array_column($cases, 'etiquette')),
+            'abonnement' => array_values(array_column($cases, Paiement::TYPE_ABONNEMENT)),
+            'journalier' => array_values(array_column($cases, Paiement::TYPE_JOURNALIER)),
+            'titre' => $p->granularite === 'jour' ? '7 derniers jours' : ($parMois ? 'par mois' : 'par jour'),
+        ];
+    }
+
+    /**
+     * Répartition des clients (comme la maquette) : les deux formules les plus suivies,
+     * les clients de passage, puis « Autres » (autres formules, abonnements expirés).
+     *
+     * @return list<array{libelle: string, valeur: int}>
+     */
+    public function repartitionClients(?CarbonInterface $date = null): array
+    {
+        $date ??= today();
+        $total = Client::count();
+
+        $parFormule = Abonnement::enCours($date)
+            ->join('formules', 'formules.id', '=', 'abonnements.formule_id')
+            ->whereIn('abonnements.client_id', Client::abonnes()->select('id'))
+            ->selectRaw('formules.nom as nom, COUNT(DISTINCT abonnements.client_id) as clients')
+            ->groupBy('formules.nom')
+            ->orderByDesc('clients')
+            ->get();
+
+        $parts = $parFormule->take(2)
+            ->map(fn ($f) => ['libelle' => 'Abonnements '.mb_strtolower($f->nom), 'valeur' => (int) $f->clients])
+            ->values()->all();
+
+        $abonnesDesFormulesPrincipales = array_sum(array_column($parts, 'valeur'));
+        $passages = Client::journaliers()->count();
+        $parts[] = ['libelle' => 'Passages', 'valeur' => $passages];
+        $parts[] = ['libelle' => 'Autres', 'valeur' => max(0, $total - $passages - $abonnesDesFormulesPrincipales)];
+
+        return $parts;
+    }
+
+    /** Formules les plus suivies (abonnements en cours à la date). */
+    public function topFormules(int $limite = 5, ?CarbonInterface $date = null): Collection
+    {
+        return Formule::withCount(['abonnements as en_cours' => fn ($q) => $q->enCours($date)])
             ->orderByDesc('en_cours')->orderBy('duree_jours')
             ->limit($limite)->get();
     }

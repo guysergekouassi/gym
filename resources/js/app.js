@@ -274,3 +274,40 @@ $$('[data-menu-section]').forEach((section) => {
         memoire.ecrire(cle, ouvrir ? 'ouvert' : 'ferme');
     });
 });
+
+// --- Filtre de période : Calendrier (exercice/mois/semaine/jour) ou Période (du/au) ---
+$$('[data-filtre-periode]').forEach((form) => {
+    const champMode = form.querySelector('[data-mode-champ]');
+    const basculer = (mode) => {
+        champMode.value = mode;
+        $$('[data-mode-bouton]', form).forEach((b) => {
+            const actif = b.dataset.modeBouton === mode;
+            b.className = b.className.replace(actif ? b.dataset.classeInactif : b.dataset.classeActif, actif ? b.dataset.classeActif : b.dataset.classeInactif);
+        });
+        $$('[data-mode-bloc]', form).forEach((bloc) => {
+            const visible = bloc.dataset.modeBloc === mode;
+            bloc.hidden = !visible;
+            // Les champs du mode caché ne sont pas envoyés
+            $$('select, input', bloc).forEach((c) => { c.disabled = !visible; });
+        });
+        if (mode === 'calendrier') {
+            const mois = form.querySelector('[name="mois"]');
+            ['semaine', 'jour'].forEach((n) => { form.querySelector(`[name="${n}"]`).disabled = !mois.value; });
+        }
+    };
+    $$('[data-mode-bouton]', form).forEach((b) => b.addEventListener('click', () => {
+        basculer(b.dataset.modeBouton);
+        if (b.dataset.modeBouton === 'calendrier') form.submit();
+    }));
+
+    // Un choix dans le calendrier recharge tout de suite, en vidant les choix qui en dépendent
+    $$('select[data-auto]', form).forEach((select) => {
+        select.addEventListener('change', () => {
+            (select.dataset.reinitialiser || '').split(',').filter(Boolean).forEach((nom) => {
+                const dependant = form.querySelector(`[name="${nom}"]`);
+                if (dependant) dependant.value = '';
+            });
+            form.submit();
+        });
+    });
+});
