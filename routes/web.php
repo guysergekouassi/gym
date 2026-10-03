@@ -55,8 +55,9 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
 
             Route::get('/pointeuses', [PointeuseController::class, 'index'])->name('pointeuses.index');
             Route::post('/pointeuses', [PointeuseController::class, 'store'])->name('pointeuses.store');
+            Route::put('/pointeuses/{lecteur}', [PointeuseController::class, 'update'])->name('pointeuses.update');
+            Route::post('/pointeuses/{lecteur}/tester', [PointeuseController::class, 'tester'])->middleware('throttle:20,1')->name('pointeuses.tester');
             Route::post('/pointeuses/{lecteur}/synchroniser', [PointeuseController::class, 'synchroniser'])->name('pointeuses.synchroniser');
-            Route::post('/pointeuses/{lecteur}/reinitialiser-ip', [PointeuseController::class, 'reinitialiserIp'])->name('pointeuses.ip');
             Route::delete('/pointeuses/{lecteur}', [PointeuseController::class, 'destroy'])->name('pointeuses.destroy');
         });
     });

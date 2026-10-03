@@ -14,7 +14,10 @@ use RuntimeException;
 
 class CaisseService
 {
-    public function __construct(private PointageService $pointage) {}
+    public function __construct(
+        private PointageService $pointage,
+        private SynchroPointeuseService $pointeuse,
+    ) {}
 
     /**
      * Encaisse une entrée journalière, enregistre le passage et numérote le reçu.
@@ -24,7 +27,7 @@ class CaisseService
      */
     public function encaisserJournalier(array $data, User $caissier): Paiement
     {
-        return DB::transaction(function () use ($data, $caissier) {
+        $paiement = DB::transaction(function () use ($data, $caissier) {
             $client = $this->resoudreClientJournalier($data);
             $quantite = max(1, min(10, (int) ($data['quantite'] ?? 1)));
 
@@ -46,6 +49,13 @@ class CaisseService
 
             return $paiement;
         });
+
+        // Journalier qui a son empreinte : la pointeuse le laisse entrer aujourd'hui
+        if ($paiement->client) {
+            $this->pointeuse->ajouterOuModifier($paiement->client);
+        }
+
+        return $paiement;
     }
 
     /**
@@ -54,7 +64,7 @@ class CaisseService
      */
     public function souscrireAbonnement(Client $client, Formule $formule, array $data, User $caissier): Paiement
     {
-        return DB::transaction(function () use ($client, $formule, $data, $caissier) {
+        $paiement = DB::transaction(function () use ($client, $formule, $data, $caissier) {
             $finActuelle = $client->finDesDroits();
             $debut = $finActuelle ? $finActuelle->copy()->addDay() : today();
 
@@ -88,6 +98,11 @@ class CaisseService
 
             return $paiement;
         });
+
+        // La pointeuse reçoit la nouvelle date de fin des droits
+        $this->pointeuse->ajouterOuModifier($client->refresh());
+
+        return $paiement;
     }
 
     /**
@@ -111,6 +126,10 @@ class CaisseService
 
             $paiement->abonnement?->update(['statut' => Abonnement::STATUT_ANNULE]);
         });
+
+        if ($paiement->client) {
+            $this->pointeuse->ajouterOuModifier($paiement->client); // droits recalculés sans ce paiement
+        }
 
         Log::notice('Paiement annulé', [
             'recu' => $paiement->numero_recu,

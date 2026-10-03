@@ -17,6 +17,7 @@ class Passage extends Model
         'empreinte_inconnue' => 'Empreinte non reconnue',
         'abonnement_expire' => 'Abonnement expiré ou inexistant',
         'paiement_requis' => 'Paiement journalier requis à la caisse',
+        'refus_pointeuse' => 'Accès refusé par la pointeuse',
     ];
 
     protected $fillable = [
