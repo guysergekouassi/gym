@@ -2,37 +2,33 @@
 @section('title', 'Pointeuses')
 
 @section('content')
-<x-page-header title="Pointeuses" subtitle="Pointeuses à empreinte reliées à l'application : les passages arrivent en temps réel, les membres sont envoyés automatiquement."/>
+<div class="mb-6">
+    <h1 class="text-3xl font-bold tracking-tight text-slate-900">Pointeuses</h1>
+    <p class="mt-1 text-slate-500">Pointeuse Hikvision reliée à l'application : les passages arrivent en direct, les membres et leurs dates d'abonnement partent automatiquement.</p>
+</div>
 
-@if(session('token_lecteur'))
-    <div class="card mb-6 border-l-4 border-amber-400 p-5">
-        <p class="font-semibold text-slate-900">Token API de « {{ session('token_lecteur')['nom'] }} »</p>
-        <p class="mt-1 text-sm text-amber-800">Copiez-le maintenant : il ne sera plus jamais affiché (seule son empreinte SHA-256 est conservée).</p>
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-            <code id="token-lecteur" class="select-all rounded-lg bg-slate-900 px-3 py-2 font-mono text-sm text-emerald-300">{{ session('token_lecteur')['token'] }}</code>
-            <button type="button" data-copier="token-lecteur" class="btn-light btn-sm">Copier</button>
-        </div>
-    </div>
-@endif
-
-<div class="grid gap-6 lg:grid-cols-3">
-    <div class="space-y-6 lg:col-span-2">
+<div class="grid gap-6 xl:grid-cols-3">
+    <div class="space-y-6 xl:col-span-2">
         <div class="card overflow-hidden">
-            <div class="card-header"><h2 class="card-title">Pointeuses déclarées</h2></div>
+            <div class="card-header"><h2 class="card-title">Pointeuses</h2></div>
             <div class="overflow-x-auto">
                 <table class="table">
-                    <thead><tr><th>Pointeuse</th><th>Liaison</th><th>Adresse IP</th><th>Envois</th><th></th></tr></thead>
+                    <thead><tr><th>Pointeuse</th><th>Liaison</th><th>Adresse</th><th>Envois</th><th></th></tr></thead>
                     <tbody>
                     @forelse($pointeuses as $p)
                         <tr class="{{ $p->actif ? '' : 'opacity-60' }}">
-                            <td><span class="block font-semibold">{{ $p->nom }}</span><span class="font-mono text-xs text-slate-500">{{ $p->numero_serie ?? 'API (token)' }}</span></td>
+                            <td>
+                                <span class="block font-semibold">{{ $p->nom }}</span>
+                                <span class="text-xs text-slate-500">{{ $p->modele ?? 'Modèle inconnu (cliquez sur Tester)' }}@if($p->numero_serie) · {{ $p->numero_serie }}@endif</span>
+                            </td>
                             <td>
                                 @if(! $p->actif)<span class="pill-gray">Désactivée</span>
-                                @elseif($p->estEnLigne())<span class="pill-green">En ligne</span>
-                                @else<span class="pill-red">Hors ligne</span>@endif
-                                <span class="mt-1 block text-xs text-slate-500">{{ $p->derniere_activite_at ? 'Vue '.$p->derniere_activite_at->diffForHumans() : 'Jamais connectée' }}</span>
+                                @elseif($p->derniere_erreur)<span class="pill-red"><x-icon name="x" class="size-3"/> Erreur</span>
+                                @elseif($p->estEnLigne())<span class="pill-green"><x-icon name="check" class="size-3"/> En ligne</span>
+                                @else<span class="pill-amber">En attente</span>@endif
+                                <span class="mt-1 block max-w-64 text-xs text-slate-500">{{ $p->derniere_erreur ?? ($p->derniere_activite_at ? 'Dernier contact '.$p->derniere_activite_at->diffForHumans() : 'Jamais contactée') }}</span>
                             </td>
-                            <td class="font-mono text-xs">{{ $p->adresse_ip ?? '—' }}</td>
+                            <td class="font-mono text-xs">{{ $p->adresse_ip }}:{{ $p->port }}</td>
                             <td class="text-xs">
                                 @if($p->en_attente)<span class="pill-amber">{{ $p->en_attente }} en attente</span>@endif
                                 @if($p->en_erreur)<span class="pill-red">{{ $p->en_erreur }} en erreur</span>@endif
@@ -41,17 +37,16 @@
                             <td>
                                 @if($p->actif)
                                     <div class="flex flex-wrap justify-end gap-1.5">
-                                        @if($p->numero_serie)
-                                            <form method="POST" action="{{ route('admin.pointeuses.synchroniser', $p) }}">@csrf<button type="submit" class="btn-light btn-sm">Envoyer tous les membres</button></form>
-                                            <form method="POST" action="{{ route('admin.pointeuses.ip', $p) }}" data-confirm="Réinitialiser l'adresse IP de « {{ $p->nom }} » ? Elle sera réapprise à sa prochaine connexion.">@csrf<button type="submit" class="btn-light btn-sm">Nouvelle IP</button></form>
-                                        @endif
+                                        <form method="POST" action="{{ route('admin.pointeuses.tester', $p) }}">@csrf<button type="submit" class="btn-primary btn-sm">Tester</button></form>
+                                        <form method="POST" action="{{ route('admin.pointeuses.synchroniser', $p) }}">@csrf<button type="submit" class="btn-light btn-sm">Envoyer les membres</button></form>
+                                        <a href="{{ route('admin.pointeuses.index', ['modifier' => $p->id]) }}" class="btn-light btn-sm">Modifier</a>
                                         <form method="POST" action="{{ route('admin.pointeuses.destroy', $p) }}" data-confirm="Désactiver « {{ $p->nom }} » ?">@csrf @method('DELETE')<button type="submit" class="btn-danger btn-sm">Désactiver</button></form>
                                     </div>
                                 @endif
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="py-10 text-center text-slate-400">Aucune pointeuse. Déclarez-la avec son n° de série (étiquette au dos).</td></tr>
+                        <tr><td colspan="5" class="py-10 text-center text-slate-400">Aucune pointeuse. Renseignez son adresse IP et son mot de passe dans le formulaire.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -59,29 +54,39 @@
         </div>
 
         <div class="card card-body text-sm text-slate-700">
-            <p class="mb-3 font-semibold text-slate-900">Réglage à faire sur la pointeuse</p>
+            <p class="mb-3 font-semibold text-slate-900">Pour que les passages arrivent</p>
             <ol class="list-decimal space-y-1.5 pl-5">
-                <li>Menu (<b>M/OK</b>) → <b>Comm.</b> → <b>Ethernet</b> : IP fixe, par ex. <code>192.168.1.201</code>, même passerelle que le PC.</li>
-                <li>Menu → <b>Comm.</b> → <b>Paramètre serveur Cloud</b> (ou ADMS) :
-                    adresse du serveur <code class="font-bold">{{ $adresseServeur ?? 'IP du PC (commande ipconfig)' }}</code>, port <code class="font-bold">{{ $portServeur }}</code>, nom de domaine : <b>Non</b>, proxy : <b>Non</b>.</li>
-                <li>Redémarrer la pointeuse. Ici, l'état passe à <span class="pill-green">En ligne</span> en moins d'une minute.</li>
-                <li>Cliquez « Envoyer tous les membres », puis enregistrez le doigt de chaque membre sur la pointeuse (Menu → Utilisateurs → son n° → Empreinte).</li>
+                <li>La pointeuse et ce PC sont reliés (câble réseau direct, box ou Wi-Fi) : voir le guide d'installation.</li>
+                <li>Renseignez l'adresse IP de la pointeuse et le mot de passe choisi à son activation, puis <b>Tester</b>.</li>
+                <li>Le programme d'écoute doit tourner : il est lancé par <code>demarrer-gymflow.bat</code> (fenêtre « Pointeuse »).</li>
+                <li>Cliquez sur « Envoyer les membres », puis enregistrez le doigt de chaque membre sur la pointeuse.</li>
             </ol>
-            <p class="mt-3 text-xs text-slate-500">L'application doit être lancée pour le réseau local : <code>php artisan serve --host=0.0.0.0 --port={{ $portServeur }}</code>, et le pare-feu Windows doit autoriser ce port. Voir le guide d'installation.</p>
+            <p class="mt-3 text-xs text-slate-500">La pointeuse refuse d'elle-même un membre dont l'abonnement est terminé : GymFlow lui envoie la date de fin à chaque paiement.</p>
         </div>
     </div>
 
-    <form method="POST" action="{{ route('admin.pointeuses.store') }}" class="card h-fit">
+    @php $p = $modifiee; @endphp
+    <form method="POST" action="{{ $p ? route('admin.pointeuses.update', $p) : route('admin.pointeuses.store') }}" class="card h-fit">
         @csrf
-        <div class="card-header"><h2 class="card-title">Déclarer une pointeuse</h2></div>
+        @if($p) @method('PUT') @endif
+        <div class="card-header"><h2 class="card-title">{{ $p ? 'Modifier « '.$p->nom.' »' : 'Ajouter la pointeuse' }}</h2></div>
         <div class="card-body space-y-4">
-            <div><label class="label" for="p-nom">Nom</label><input id="p-nom" name="nom" required maxlength="100" class="input" placeholder="ex. Entrée principale"></div>
-            <div>
-                <label class="label" for="p-sn">N° de série</label>
-                <input id="p-sn" name="numero_serie" maxlength="50" class="input font-mono" placeholder="ex. CQZ7224560123">
-                <p class="hint">Sur l'étiquette au dos, ou Menu → Infos système → Infos appareil. Laissez vide pour un accès API par token (avancé).</p>
+            <div><label class="label" for="p-nom">Nom</label><input id="p-nom" name="nom" required maxlength="100" value="{{ old('nom', $p?->nom ?? 'Entrée principale') }}" class="input"></div>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                    <label class="label" for="p-ip">Adresse IP</label>
+                    <input id="p-ip" name="adresse_ip" required maxlength="15" inputmode="decimal" value="{{ old('adresse_ip', $p?->adresse_ip) }}" class="input font-mono" placeholder="192.168.50.64">
+                </div>
+                <div><label class="label" for="p-port">Port</label><input id="p-port" name="port" type="number" min="1" max="65535" required value="{{ old('port', $p?->port ?? 80) }}" class="input font-mono"></div>
             </div>
-            <button type="submit" class="btn-primary w-full">Déclarer</button>
+            <div><label class="label" for="p-id">Identifiant</label><input id="p-id" name="identifiant" required maxlength="32" value="{{ old('identifiant', $p?->identifiant ?? 'admin') }}" class="input font-mono" autocomplete="off"></div>
+            <div>
+                <label class="label" for="p-mdp">Mot de passe de la pointeuse</label>
+                <input id="p-mdp" name="mot_de_passe" type="password" maxlength="64" @required(! $p) class="input" autocomplete="new-password" placeholder="{{ $p ? 'Laisser vide pour ne pas changer' : 'Choisi à l\'activation' }}">
+                <p class="hint">Stocké chiffré, jamais réaffiché.</p>
+            </div>
+            <button type="submit" class="btn-primary w-full">{{ $p ? 'Enregistrer' : 'Ajouter' }}</button>
+            @if($p)<a href="{{ route('admin.pointeuses.index') }}" class="btn-light w-full">Annuler</a>@endif
         </div>
     </form>
 </div>

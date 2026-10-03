@@ -5,7 +5,7 @@ Deux accès :
 - **Caissière** : encaisse les **passages** (séance à l'unité) et les **abonnements**, crée les fiches clients, attribue le n° de pointeuse, imprime le ticket. Elle ne voit que sa propre caisse et ne peut ni annuler un ticket ni modifier un prix.
 - **Responsable (admin)** : tout ce que fait la caissière + tableau de bord, journal des encaissements (filtre, export Excel, annulation motivée), formules & tarifs, comptes du personnel, pointeuses.
 
-Contrôle d'accès par **empreinte digitale** (pointeuse ZKTeco), ticket sur **imprimante thermique** 80 ou 58 mm.
+Contrôle d'accès par **empreinte digitale** (pointeuse Hikvision), ticket sur **imprimante thermique** 80 ou 58 mm.
 
 ## 1. Installer le projet
 
@@ -57,13 +57,11 @@ Comptes créés — **le mot de passe doit être changé à la première connexi
 | Admin | admin@gymflow.local | ChangeMoi!2026 |
 | Caissière | caisse@gymflow.local | ChangeMoi!2026 |
 
-## 5. Pointeuse à empreinte
+## 5. Pointeuse à empreinte (Hikvision DS-K1T808MFWX)
 
 Guide complet, avec schéma de montage : **[docs/INSTALLATION.md](docs/INSTALLATION.md)**.
 
-En résumé : la pointeuse (ZKTeco) se connecte en réseau au PC par le protocole « Serveur Cloud / ADMS ». Elle envoie chaque passage en temps réel (`/iclock/cdata`), et GymFlow lui envoie les membres (nom + n°). L'écran d'accueil affiche vert ou rouge selon l'abonnement.
-
-Sur le PC de la salle : `demarrer-gymflow.bat` (lance GymFlow sur le réseau local, port 8005) et, une fois, `ouvrir-pare-feu.bat` en administrateur.
+En résumé : GymFlow dialogue avec la pointeuse par son API HTTP « ISAPI » (adresse IP + mot de passe admin de la pointeuse, stocké chiffré). Le programme `php artisan pointeuse:ecouter` (lancé par `demarrer-gymflow.bat`) récupère les passages toutes les 3 s et envoie les membres avec la date de fin de leurs droits : la pointeuse refuse d'elle-même un abonnement terminé.
 
 ## 6. Imprimante thermique (tickets)
 
@@ -82,7 +80,7 @@ Sur le PC de la salle : `demarrer-gymflow.bat` (lance GymFlow sur le réseau loc
 - En-têtes HTTP : CSP stricte (aucun script inline ou tiers), anti-clickjacking, `nosniff`, pas de cache des pages connectées (poste partagé).
 - Aucune ressource externe (CDN, polices) : rien ne peut être injecté par un tiers, et l'appli marche hors ligne.
 - Photos : JPG/PNG/WebP uniquement, renommées aléatoirement. Recherches protégées (paramètres liés, jokers échappés). Export CSV protégé contre l'injection de formules Excel.
-- Pointeuse reconnue par n° de série + adresse IP mémorisée ; noms nettoyés avant envoi (pas d'injection dans le protocole) ; aucune empreinte stockée par l'application ; débit limité.
+- Pointeuse : mot de passe chiffré, adresses du réseau local uniquement, aucune redirection suivie, aucune empreinte stockée par l'application ; GymFlow n'écoute que sur 127.0.0.1.
 
 **Checklist de mise en production** : `APP_ENV=production`, `APP_DEBUG=false`, `php artisan key:generate` (clé unique), `SESSION_ENCRYPT=true`, HTTPS si accessible hors de la salle (+ `SESSION_SECURE_COOKIE=true`), `expose_php=Off` dans php.ini, sauvegarde quotidienne de la base, `php artisan config:cache route:cache view:cache`.
 
