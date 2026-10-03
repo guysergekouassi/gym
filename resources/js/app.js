@@ -3,16 +3,27 @@
 
 const $$ = (selecteur, racine = document) => Array.from(racine.querySelectorAll(selecteur));
 
-// --- Menu latéral (mobile) ---
+// --- Bouton ≡ : ouvre / ferme la barre latérale ---
+// Petit écran : la barre glisse par-dessus la page. Grand écran : elle se range et la page prend toute la largeur.
+const app = document.querySelector('[data-app]');
 const sidebar = document.querySelector('[data-sidebar]');
 const fond = document.querySelector('[data-sidebar-backdrop]');
-function basculerMenu(ouvrir) {
+const grandEcran = () => window.matchMedia('(min-width: 1024px)').matches;
+function basculerMobile(ouvrir) {
     if (!sidebar) return;
     sidebar.classList.toggle('-translate-x-full', !ouvrir);
     fond?.classList.toggle('hidden', !ouvrir);
 }
-document.querySelector('[data-sidebar-toggle]')?.addEventListener('click', () => basculerMenu(true));
-fond?.addEventListener('click', () => basculerMenu(false));
+document.querySelector('[data-sidebar-toggle]')?.addEventListener('click', () => {
+    if (grandEcran() && app) {
+        const fermer = app.dataset.menu !== 'ferme';
+        app.dataset.menu = fermer ? 'ferme' : 'ouvert';
+        document.cookie = `menu=${fermer ? 'ferme' : 'ouvert'}; path=/; max-age=31536000; SameSite=Lax`;
+    } else {
+        basculerMobile(sidebar.classList.contains('-translate-x-full'));
+    }
+});
+fond?.addEventListener('click', () => basculerMobile(false));
 
 // --- Anti double-clic : un formulaire envoyé ne peut pas l'être une seconde fois ---
 $$('form').forEach((form) => {
@@ -97,6 +108,7 @@ $$('[data-recherche-client]').forEach((bloc) => {
     const champ = bloc.querySelector('[data-client-q]');
     const idCache = bloc.querySelector('[data-client-id]');
     const liste = bloc.querySelector('[data-client-resultats]');
+    const vider = bloc.querySelector('[data-client-vider]');
     let minuteur = null;
     let requete = null;
 
@@ -107,6 +119,7 @@ $$('[data-recherche-client]').forEach((bloc) => {
         libelle.classList.toggle('text-slate-400', !c);
         libelle.classList.toggle('font-semibold', !!c);
         libelle.classList.toggle('text-slate-900', !!c);
+        vider?.classList.toggle('hidden', !c);
         fermer();
         ouvrir.focus();
     };
@@ -166,6 +179,7 @@ $$('[data-recherche-client]').forEach((bloc) => {
         }
     };
 
+    vider?.addEventListener('click', () => selectionner(null));
     ouvrir.addEventListener('click', () => {
         if (!panneau.hidden) { fermer(); return; }
         panneau.hidden = false;

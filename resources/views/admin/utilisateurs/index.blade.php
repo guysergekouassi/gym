@@ -28,7 +28,16 @@
                         @else<span class="pill-green">Actif</span>@endif
                     </td>
                     <td class="text-slate-600">{{ $u->derniere_connexion_at?->diffForHumans() ?? 'Jamais' }}</td>
-                    <td class="text-right"><a href="{{ route('admin.utilisateurs.edit', $u) }}" class="btn-light btn-sm"><x-icon name="pencil" class="size-3.5"/> Modifier</a></td>
+                    <td class="text-right">
+                        <div class="flex justify-end gap-1.5">
+                            <a href="{{ route('admin.utilisateurs.edit', $u) }}" class="btn-light btn-sm"><x-icon name="pencil" class="size-3.5"/> Modifier</a>
+                            @unless($u->is(auth()->user()))
+                                <form method="POST" action="{{ route('admin.utilisateurs.supprimer', $u) }}" data-confirm="Supprimer le compte de {{ $u->name }} ? (Refusé s'il a déjà encaissé : désactivez-le alors.)">@csrf @method('DELETE')
+                                    <button type="submit" class="btn-danger btn-sm" aria-label="Supprimer" title="Supprimer"><x-icon name="x" class="size-3.5"/></button>
+                                </form>
+                            @endunless
+                        </div>
+                    </td>
                 </tr>
             @endforeach
             </tbody>

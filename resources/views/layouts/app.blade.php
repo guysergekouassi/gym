@@ -15,10 +15,12 @@
     $alertes ??= collect();
 @endphp
 
-<div class="min-h-full lg:pl-64">
+{{-- Barre latérale fermée sur grand écran : choix mémorisé dans un petit cookie (« ferme » ou rien) --}}
+<div data-app data-menu="{{ request()->cookie('menu') === 'ferme' ? 'ferme' : 'ouvert' }}"
+     class="group/app min-h-full transition-[padding] duration-200 lg:pl-64 lg:data-[menu=ferme]:pl-0">
     {{-- Barre latérale --}}
     <div data-sidebar-backdrop class="fixed inset-0 z-40 hidden bg-ink-950/60 backdrop-blur-sm lg:hidden"></div>
-    <aside data-sidebar class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col bg-gradient-to-b from-ink-900 to-ink-950 px-4 py-6 transition-transform duration-200 lg:translate-x-0">
+    <aside data-sidebar class="fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col bg-gradient-to-b from-ink-900 to-ink-950 px-4 py-6 transition-transform duration-200 lg:translate-x-0 lg:group-data-[menu=ferme]/app:-translate-x-full">
         <a href="{{ url('/') }}" class="flex items-center gap-2.5 px-2">
             <x-logo class="h-9 w-9"/>
             <span class="truncate text-2xl font-extrabold tracking-tight text-white">{{ config('salle.nom') }}</span>
@@ -73,16 +75,11 @@
 
     {{-- Barre du haut --}}
     <header class="sticky top-0 z-30 flex h-[4.5rem] items-center gap-3 border-b border-slate-200/70 bg-[#f3f6fa]/90 px-4 backdrop-blur sm:px-6 lg:px-8">
-        <button type="button" data-sidebar-toggle class="-ml-1 rounded-lg p-2 text-slate-600 hover:bg-white lg:hidden" aria-label="Ouvrir le menu">
+        <button type="button" data-sidebar-toggle class="-ml-1 rounded-xl p-2 text-slate-700 ring-1 ring-transparent hover:bg-white hover:ring-slate-200"
+                aria-label="Ouvrir / fermer le menu" title="Ouvrir / fermer le menu">
             <x-icon name="menu" class="size-6"/>
         </button>
 
-        <form method="GET" action="{{ route('clients.index') }}" class="relative w-full max-w-md" role="search">
-            <x-icon name="search" class="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-slate-400"/>
-            <input type="search" name="q" maxlength="100" value="{{ request()->routeIs('clients.index') ? request('q') : '' }}"
-                   placeholder="Rechercher un client, un téléphone…"
-                   class="w-full rounded-xl border-0 bg-white py-2.5 pl-11 pr-4 text-sm shadow-sm ring-1 ring-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500">
-        </form>
 
         <div class="ml-auto flex items-center gap-3">
             {{-- Alertes : abonnements qui expirent bientôt --}}

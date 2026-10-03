@@ -40,6 +40,18 @@ class FormuleController extends Controller
         return back()->with('succes', "Formule « {$formule->nom} » mise à jour.");
     }
 
+    /** Une formule déjà vendue reste dans l'historique : on la désactive au lieu de la supprimer. */
+    public function destroy(Formule $formule): RedirectResponse
+    {
+        if ($formule->abonnements()->exists()) {
+            return back()->with('erreur', "« {$formule->nom} » a déjà été vendue : décochez « Active » pour la retirer de la caisse.");
+        }
+
+        $formule->delete();
+
+        return back()->with('succes', "Formule « {$formule->nom} » supprimée.");
+    }
+
     public function tarifJournalier(Request $request): RedirectResponse
     {
         $data = $request->validate([

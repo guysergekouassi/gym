@@ -59,7 +59,7 @@ Comptes créés — **le mot de passe doit être changé à la première connexi
 
 ## 5. Pointeuse à empreinte (Hikvision DS-K1T808MFWX)
 
-Guide complet, avec schéma de montage : **[docs/INSTALLATION.md](docs/INSTALLATION.md)**.
+Guides : **[docs/GUIDE-CONFIGURATION-POINTEUSE.md](docs/GUIDE-CONFIGURATION-POINTEUSE.md)** (branchement pas à pas, câble ou Wi-Fi) et **[docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md)** (installation chez le client, démarrage automatique, sauvegardes).
 
 En résumé : GymFlow dialogue avec la pointeuse par son API HTTP « ISAPI » (adresse IP + mot de passe admin de la pointeuse, stocké chiffré). Le programme `php artisan pointeuse:ecouter` (lancé par `demarrer-gymflow.bat`) récupère les passages toutes les 3 s et envoie les membres avec la date de fin de leurs droits : la pointeuse refuse d'elle-même un abonnement terminé.
 
