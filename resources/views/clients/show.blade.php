@@ -2,6 +2,7 @@
 @section('title', $client->nom_complet)
 
 @php
+    use App\Models\Abonnement;
     use App\Models\Client;
     use App\Models\Paiement;
     use App\Models\Passage;
@@ -9,77 +10,104 @@
 @endphp
 
 @section('content')
-<div class="bg-white rounded-xl p-6 shadow-sm flex flex-wrap gap-6 items-center mb-6">
-    @if($client->photo_url)
-        <img src="{{ $client->photo_url }}" alt="" class="h-24 w-24 rounded-full object-cover">
-    @else
-        <div class="h-24 w-24 rounded-full bg-slate-200 flex items-center justify-center text-3xl font-bold text-slate-500">{{ mb_substr($client->nom, 0, 1) }}</div>
-    @endif
-    <div class="flex-1">
-        <h1 class="text-2xl font-bold">{{ $client->nom_complet }}</h1>
-        <p class="text-slate-500">{{ Client::TYPES[$client->type] ?? $client->type }} · {{ $client->telephone ?? 'pas de téléphone' }} · Empreinte {{ $client->empreinte_id ? '#'.$client->empreinte_id : 'non enrôlée' }}</p>
-        <p class="mt-2">
-            @if($finDroits)
-                <span class="inline-block rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-sm">Droits jusqu'au {{ $finDroits->format('d/m/Y') }}</span>
-            @elseif($client->type === Client::TYPE_ABONNE)
-                <span class="inline-block rounded-full bg-red-100 text-red-800 px-3 py-1 text-sm">Abonnement expiré</span>
+<div class="card mb-6 overflow-hidden">
+    <div class="h-24 bg-gradient-to-r from-ink-950 via-ink-900 to-brand-700"></div>
+    <div class="flex flex-wrap items-end gap-5 px-6 pb-6">
+        <x-avatar :client="$client" size="size-24" text="text-3xl" class="-mt-12 ring-4"/>
+        <div class="min-w-0 flex-1 pt-3">
+            <h1 class="text-2xl font-bold text-slate-900">{{ $client->nom_complet }}</h1>
+            <div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                <span class="{{ $client->type === Client::TYPE_ABONNE ? 'pill-blue' : 'pill-gray' }}">{{ Client::TYPES[$client->type] ?? $client->type }}</span>
+                @if($finDroits)
+                    <span class="pill-green">Droits jusqu'au {{ $finDroits->format('d/m/Y') }}</span>
+                @elseif($client->type === Client::TYPE_ABONNE)
+                    <span class="pill-red">Abonnement expiré</span>
+                @endif
+                <span class="pill-gray"><x-icon name="card" class="size-3.5"/> {{ $client->badge_id ? 'Badge '.$client->badge_id : 'Pas de badge' }}</span>
+                @if($client->telephone)<span class="text-slate-500">{{ $client->telephone }}</span>@endif
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('caisse.index', ['client_id' => $client->id]) }}" class="btn-primary"><x-icon name="card" class="size-4"/> Abonner / renouveler</a>
+            <a href="{{ route('clients.edit', $client) }}" class="btn-light"><x-icon name="pencil" class="size-4"/> Modifier</a>
+            @if(auth()->user()->isAdmin())
+                <form method="POST" action="{{ route('clients.destroy', $client) }}" data-confirm="Archiver {{ $client->nom_complet }} ? Son badge sera libéré.">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="btn-danger"><x-icon name="archive" class="size-4"/> Archiver</button>
+                </form>
             @endif
-        </p>
-    </div>
-    <div class="flex flex-col gap-2 text-sm">
-        <a href="{{ route('caisse.index', ['client_id' => $client->id]) }}" class="rounded-lg bg-sky-600 text-white px-4 py-2 text-center">Abonner / renouveler</a>
-        <a href="{{ route('clients.edit', $client) }}" class="rounded-lg bg-slate-200 px-4 py-2 text-center">Modifier</a>
-        @if(auth()->user()->isAdmin())
-            <form method="POST" action="{{ route('clients.destroy', $client) }}" onsubmit="return confirm('Archiver ce client ?')">
-                @csrf @method('DELETE')
-                <button class="w-full rounded-lg bg-red-50 text-red-700 px-4 py-2">Archiver</button>
-            </form>
-        @endif
+        </div>
     </div>
 </div>
 
-<div class="grid lg:grid-cols-3 gap-4">
-    <section class="bg-white rounded-xl p-4 shadow-sm">
-        <h2 class="font-semibold mb-3">Abonnements</h2>
-        <ul class="text-sm space-y-2">
+<div class="mb-6 grid gap-4 sm:grid-cols-3">
+    <x-stat label="Venues (30 derniers jours)" :value="$venues30j" icon="trending" tone="green"/>
+    <x-stat label="Jours restants" :value="$finDroits ? max(0, (int) today()->diffInDays($finDroits, false)) : '—'" icon="clock" tone="blue"/>
+    <x-stat label="Total payé" :value="Fcfa::format($client->paiements->reject->estAnnule()->sum('montant'))" icon="cash" tone="brand" hint="Sur les 20 derniers paiements"/>
+</div>
+
+<div class="grid gap-6 lg:grid-cols-3">
+    <section class="card">
+        <div class="card-header"><h2 class="card-title">Abonnements</h2></div>
+        <ul class="divide-y divide-slate-100">
             @forelse($client->abonnements as $abonnement)
-                <li class="border-b pb-2">
-                    <span class="font-medium">{{ $abonnement->formule->nom }}</span>
-                    @if($abonnement->est_renouvellement)<span class="text-xs text-sky-700">(renouvellement)</span>@endif
-                    <br>{{ $abonnement->date_debut->format('d/m/Y') }} → {{ $abonnement->date_fin->format('d/m/Y') }} · {{ Fcfa::format($abonnement->montant) }}
+                @php
+                    $annule = $abonnement->statut === Abonnement::STATUT_ANNULE;
+                    $enCours = ! $annule && $abonnement->date_debut->lte(today()) && $abonnement->date_fin->gte(today());
+                    $aVenir = ! $annule && $abonnement->date_debut->gt(today());
+                @endphp
+                <li class="px-5 py-3 text-sm {{ $annule ? 'opacity-50' : '' }}">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="font-semibold {{ $annule ? 'line-through' : '' }}">{{ $abonnement->formule->nom }}</span>
+                        @if($annule)<span class="pill-red">Annulé</span>
+                        @elseif($enCours)<span class="pill-green">En cours</span>
+                        @elseif($aVenir)<span class="pill-blue">À venir</span>
+                        @else<span class="pill-gray">Terminé</span>@endif
+                    </div>
+                    <p class="mt-0.5 text-slate-500">{{ $abonnement->date_debut->format('d/m/Y') }} → {{ $abonnement->date_fin->format('d/m/Y') }} · {{ Fcfa::format($abonnement->montant) }}</p>
                 </li>
             @empty
-                <li class="text-slate-400">Aucun abonnement</li>
+                <li class="px-5 py-8 text-center text-sm text-slate-400">Aucun abonnement</li>
             @endforelse
         </ul>
     </section>
 
-    <section class="bg-white rounded-xl p-4 shadow-sm">
-        <h2 class="font-semibold mb-3">Derniers passages</h2>
-        <ul class="text-sm space-y-1">
+    <section class="card">
+        <div class="card-header"><h2 class="card-title">Derniers passages</h2></div>
+        <ul class="max-h-[28rem] divide-y divide-slate-100 overflow-y-auto">
             @forelse($passages as $passage)
-                <li class="flex justify-between">
-                    <span>{{ $passage->passe_le->format('d/m/Y H:i') }} · {{ $passage->methode === Passage::METHODE_EMPREINTE ? 'Empreinte' : 'Caisse' }}</span>
-                    <span class="{{ $passage->estAutorise() ? 'text-emerald-700' : 'text-red-700' }}">{{ $passage->estAutorise() ? 'Entré' : $passage->message() }}</span>
+                <li class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
+                    <span>
+                        <span class="block font-medium">{{ $passage->passe_le->format('d/m/Y H:i') }}</span>
+                        <span class="text-xs text-slate-500">{{ $passage->methode === Passage::METHODE_BADGE ? 'Badge' : 'Caisse' }}</span>
+                    </span>
+                    @if($passage->estAutorise())<span class="pill-green">Entré</span>@else<span class="pill-red">{{ $passage->message() }}</span>@endif
                 </li>
             @empty
-                <li class="text-slate-400">Aucun passage</li>
+                <li class="px-5 py-8 text-center text-sm text-slate-400">Aucun passage</li>
             @endforelse
         </ul>
     </section>
 
-    <section class="bg-white rounded-xl p-4 shadow-sm">
-        <h2 class="font-semibold mb-3">Paiements</h2>
-        <ul class="text-sm space-y-1">
+    <section class="card">
+        <div class="card-header"><h2 class="card-title">Paiements</h2></div>
+        <ul class="divide-y divide-slate-100">
             @forelse($client->paiements as $paiement)
-                <li class="flex justify-between">
-                    <a href="{{ route('recus.show', $paiement) }}" class="text-sky-700 hover:underline">{{ $paiement->created_at->format('d/m/Y') }} · {{ Paiement::TYPES[$paiement->type] ?? $paiement->type }}</a>
-                    <span>{{ Fcfa::format($paiement->montant) }}</span>
+                <li class="flex items-center justify-between gap-3 px-5 py-2.5 text-sm {{ $paiement->estAnnule() ? 'opacity-50' : '' }}">
+                    <span>
+                        <a href="{{ route('recus.show', $paiement) }}" class="link">{{ $paiement->numero_recu }}</a>
+                        <span class="block text-xs text-slate-500">{{ $paiement->created_at->format('d/m/Y') }} · {{ Paiement::TYPES[$paiement->type] ?? $paiement->type }}{{ $paiement->estAnnule() ? ' · annulé' : '' }}</span>
+                    </span>
+                    <span class="font-semibold {{ $paiement->estAnnule() ? 'line-through' : '' }}">{{ Fcfa::format($paiement->montant) }}</span>
                 </li>
             @empty
-                <li class="text-slate-400">Aucun paiement</li>
+                <li class="px-5 py-8 text-center text-sm text-slate-400">Aucun paiement</li>
             @endforelse
         </ul>
     </section>
 </div>
+
+@if($client->notes)
+    <div class="card card-body mt-6 text-sm"><p class="mb-1 font-semibold">Notes</p><p class="whitespace-pre-line text-slate-600">{{ $client->notes }}</p></div>
+@endif
 @endsection

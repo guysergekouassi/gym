@@ -1,1 +1,202 @@
-//
+// Scripts de l'interface. Aucun script inline dans les vues (CSP stricte) :
+// tout est branché ici via des attributs data-*.
+
+const $$ = (selecteur, racine = document) => Array.from(racine.querySelectorAll(selecteur));
+
+// --- Menu latéral (mobile) ---
+const sidebar = document.querySelector('[data-sidebar]');
+const fond = document.querySelector('[data-sidebar-backdrop]');
+function basculerMenu(ouvrir) {
+    if (!sidebar) return;
+    sidebar.classList.toggle('-translate-x-full', !ouvrir);
+    fond?.classList.toggle('hidden', !ouvrir);
+}
+document.querySelector('[data-sidebar-toggle]')?.addEventListener('click', () => basculerMenu(true));
+fond?.addEventListener('click', () => basculerMenu(false));
+
+// --- Anti double-clic : un formulaire envoyé ne peut pas l'être une seconde fois ---
+$$('form').forEach((form) => {
+    form.addEventListener('submit', (e) => {
+        if (form.dataset.envoye === '1') {
+            e.preventDefault();
+            return;
+        }
+        if (form.method.toLowerCase() === 'post') {
+            form.dataset.envoye = '1';
+            $$('button[type="submit"], button:not([type])', form).forEach((b) => {
+                b.disabled = true;
+                b.classList.add('opacity-70');
+            });
+        }
+    });
+});
+
+// --- Confirmation avant action sensible ---
+$$('form[data-confirm]').forEach((form) => {
+    form.addEventListener('submit', (e) => {
+        if (!window.confirm(form.dataset.confirm)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }
+    }, { capture: true });
+});
+
+// --- Fenêtres modales (<dialog>) ---
+$$('[data-dialog-open]').forEach((bouton) => {
+    bouton.addEventListener('click', () => {
+        const dialog = document.getElementById(bouton.dataset.dialogOpen);
+        if (!dialog) return;
+        if (bouton.dataset.action) dialog.querySelector('form')?.setAttribute('action', bouton.dataset.action);
+        if (bouton.dataset.label) {
+            const cible = dialog.querySelector('[data-dialog-label]');
+            if (cible) cible.textContent = bouton.dataset.label;
+        }
+        dialog.showModal();
+    });
+});
+$$('[data-dialog-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog')?.close()));
+
+// --- Onglets de la caisse ---
+$$('[data-tabs]').forEach((groupe) => {
+    const boutons = $$('[data-tab]', groupe);
+    const panneaux = $$('[data-panel]', groupe);
+    const activer = (nom) => {
+        boutons.forEach((b) => {
+            const actif = b.dataset.tab === nom;
+            b.setAttribute('aria-selected', actif ? 'true' : 'false');
+            b.classList.toggle('bg-white', actif);
+            b.classList.toggle('shadow-sm', actif);
+            b.classList.toggle('text-slate-900', actif);
+            b.classList.toggle('text-slate-500', !actif);
+        });
+        panneaux.forEach((p) => { p.hidden = p.dataset.panel !== nom; });
+    };
+    boutons.forEach((b) => b.addEventListener('click', () => activer(b.dataset.tab)));
+    activer(groupe.dataset.tabs || boutons[0]?.dataset.tab);
+});
+
+// --- Recherche de client (caisse) ---
+$$('[data-recherche-client]').forEach((bloc) => {
+    const url = bloc.dataset.url;
+    const champ = bloc.querySelector('[data-client-q]');
+    const idCache = bloc.querySelector('[data-client-id]');
+    const liste = bloc.querySelector('[data-client-resultats]');
+    const choisi = bloc.querySelector('[data-client-choisi]');
+    const choisiNom = bloc.querySelector('[data-client-choisi-nom]');
+    const effacer = bloc.querySelector('[data-client-effacer]');
+    let minuteur = null;
+    let requete = null;
+
+    const selectionner = (c) => {
+        idCache.value = c ? c.id : '';
+        if (choisiNom) choisiNom.textContent = c ? `${c.nom}${c.fin_droits ? ' · droits jusqu’au ' + c.fin_droits : ''}` : '';
+        choisi?.classList.toggle('hidden', !c);
+        champ.closest('[data-client-champ]')?.classList.toggle('hidden', !!c);
+        liste.classList.add('hidden');
+        champ.value = '';
+    };
+
+    effacer?.addEventListener('click', () => { selectionner(null); champ.focus(); });
+
+    champ.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.preventDefault(); // Entrée ne doit pas encaisser par accident
+    });
+
+    champ.addEventListener('input', () => {
+        clearTimeout(minuteur);
+        const q = champ.value.trim();
+        if (q.length < 2) { liste.classList.add('hidden'); return; }
+
+        minuteur = setTimeout(async () => {
+            requete?.abort();
+            requete = new AbortController();
+            try {
+                const reponse = await fetch(`${url}?q=${encodeURIComponent(q)}`, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    signal: requete.signal,
+                    credentials: 'same-origin',
+                });
+                if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`);
+                const clients = await reponse.json();
+
+                liste.replaceChildren();
+                if (clients.length === 0) {
+                    const li = document.createElement('li');
+                    li.className = 'px-4 py-3 text-sm text-slate-400';
+                    li.textContent = 'Aucun client trouvé';
+                    liste.appendChild(li);
+                }
+                clients.forEach((c) => {
+                    const li = document.createElement('li');
+                    const bouton = document.createElement('button');
+                    bouton.type = 'button';
+                    bouton.className = 'flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm hover:bg-brand-50';
+                    const gauche = document.createElement('span');
+                    const nom = document.createElement('span');
+                    nom.className = 'block font-semibold text-slate-900';
+                    nom.textContent = c.nom;
+                    const details = document.createElement('span');
+                    details.className = 'block text-xs text-slate-500';
+                    details.textContent = [c.type, c.telephone].filter(Boolean).join(' · ');
+                    gauche.append(nom, details);
+                    const droite = document.createElement('span');
+                    droite.className = c.fin_droits ? 'pill-green' : 'pill-gray';
+                    droite.textContent = c.fin_droits ? `→ ${c.fin_droits}` : 'Sans abonnement';
+                    bouton.append(gauche, droite);
+                    bouton.addEventListener('click', () => selectionner(c));
+                    li.appendChild(bouton);
+                    liste.appendChild(li);
+                });
+                liste.classList.remove('hidden');
+            } catch (erreur) {
+                if (erreur.name !== 'AbortError') {
+                    console.error('Recherche client impossible :', erreur);
+                    liste.classList.add('hidden');
+                }
+            }
+        }, 250);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!bloc.contains(e.target)) liste.classList.add('hidden');
+    });
+});
+
+// --- Récapitulatif dynamique de la formule choisie (caisse) ---
+$$('[data-recap-source]').forEach((form) => {
+    const cible = form.querySelector('[data-recap-montant]');
+    const maj = () => {
+        const choisie = form.querySelector('input[name="formule_id"]:checked');
+        if (cible && choisie) cible.textContent = choisie.dataset.prix;
+    };
+    form.addEventListener('change', maj);
+    maj();
+});
+
+// --- Reçu : impression automatique puis retour à la caisse ---
+const recu = document.querySelector('[data-recu-auto]');
+if (recu) {
+    window.addEventListener('load', () => setTimeout(() => window.print(), 300));
+    window.addEventListener('afterprint', () => { window.location.href = recu.dataset.retour; });
+}
+$$('[data-imprimer]').forEach((b) => b.addEventListener('click', () => window.print()));
+
+// --- Copier dans le presse-papiers ---
+$$('[data-copier]').forEach((b) => {
+    b.addEventListener('click', async () => {
+        const source = document.getElementById(b.dataset.copier);
+        try {
+            await navigator.clipboard.writeText(source.textContent.trim());
+            b.textContent = 'Copié ✓';
+        } catch {
+            window.getSelection().selectAllChildren(source);
+        }
+    });
+});
+
+// --- Champs remplis par le lecteur de badge USB : son "Entrée" final ne doit pas valider le formulaire ---
+$$('[data-no-enter]').forEach((champ) => {
+    champ.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.preventDefault();
+    });
+});
