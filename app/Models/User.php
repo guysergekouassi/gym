@@ -15,7 +15,12 @@ class User extends Authenticatable
     public const ROLE_ADMIN = 'admin';
     public const ROLE_CAISSIER = 'caissier';
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'actif'];
+    public const ROLES = [
+        self::ROLE_ADMIN => 'Responsable (admin)',
+        self::ROLE_CAISSIER => 'Caissière',
+    ];
+
+    protected $fillable = ['name', 'email', 'password', 'role', 'actif', 'doit_changer_mdp'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -25,6 +30,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'actif' => 'boolean',
+            'doit_changer_mdp' => 'boolean',
+            'derniere_connexion_at' => 'datetime',
         ];
     }
 
