@@ -1,7 +1,12 @@
 <?php
 
 use App\Http\Controllers\AccueilController;
+use App\Http\Controllers\Admin\FormuleController;
+use App\Http\Controllers\Admin\LecteurController;
+use App\Http\Controllers\Admin\PaiementController;
+use App\Http\Controllers\Admin\UtilisateurController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\MotDePasseController;
 use App\Http\Controllers\CaisseController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
@@ -10,26 +15,50 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
-    Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:10,1');
+    Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:20,1');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'mdp.change'])->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+
+    Route::get('/mot-de-passe', [MotDePasseController::class, 'edit'])->name('mot-de-passe.edit');
+    Route::put('/mot-de-passe', [MotDePasseController::class, 'update'])->middleware('throttle:10,1')->name('mot-de-passe.update');
 
     Route::get('/', fn () => redirect()->route(
         auth()->user()->isAdmin() ? 'dashboard' : 'caisse.index'
     ));
 
+    // --- Responsable (admin) uniquement ---
     Route::middleware('role:admin')->group(function () {
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
         Route::delete('/clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
+
+        Route::prefix('admin')->name('admin.')->group(function () {
+            Route::get('/paiements', [PaiementController::class, 'index'])->name('paiements.index');
+            Route::get('/paiements/export', [PaiementController::class, 'export'])->name('paiements.export');
+            Route::post('/paiements/{paiement}/annuler', [PaiementController::class, 'annuler'])->name('paiements.annuler');
+
+            Route::get('/formules', [FormuleController::class, 'index'])->name('formules.index');
+            Route::post('/formules', [FormuleController::class, 'store'])->name('formules.store');
+            Route::put('/formules/{formule}', [FormuleController::class, 'update'])->name('formules.update');
+            Route::put('/tarif-journalier', [FormuleController::class, 'tarifJournalier'])->name('formules.tarif');
+
+            Route::resource('utilisateurs', UtilisateurController::class)
+                ->parameters(['utilisateurs' => 'utilisateur'])
+                ->except(['show', 'destroy']);
+
+            Route::get('/lecteurs', [LecteurController::class, 'index'])->name('lecteurs.index');
+            Route::post('/lecteurs', [LecteurController::class, 'store'])->name('lecteurs.store');
+            Route::delete('/lecteurs/{lecteur}', [LecteurController::class, 'destroy'])->name('lecteurs.destroy');
+        });
     });
 
+    // --- Caissière et responsable ---
     Route::middleware('role:admin,caissier')->group(function () {
         Route::get('/caisse', [CaisseController::class, 'index'])->name('caisse.index');
-        Route::post('/caisse/journalier', [CaisseController::class, 'journalier'])->name('caisse.journalier');
-        Route::post('/caisse/abonnement', [CaisseController::class, 'abonnement'])->name('caisse.abonnement');
-        Route::get('/caisse/clients', [CaisseController::class, 'clients'])->name('caisse.clients');
+        Route::post('/caisse/journalier', [CaisseController::class, 'journalier'])->middleware('throttle:30,1')->name('caisse.journalier');
+        Route::post('/caisse/abonnement', [CaisseController::class, 'abonnement'])->middleware('throttle:30,1')->name('caisse.abonnement');
+        Route::get('/caisse/clients', [CaisseController::class, 'clients'])->middleware('throttle:120,1')->name('caisse.clients');
 
         Route::get('/recus/{paiement}', [RecuController::class, 'show'])->name('recus.show');
 
@@ -37,5 +66,6 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/accueil', [AccueilController::class, 'index'])->name('accueil.index');
         Route::get('/accueil/dernier', [AccueilController::class, 'dernier'])->name('accueil.dernier');
+        Route::post('/accueil/scan', [AccueilController::class, 'scan'])->middleware('throttle:120,1')->name('accueil.scan');
     });
 });
