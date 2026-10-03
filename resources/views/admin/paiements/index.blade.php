@@ -8,12 +8,13 @@
 
 @section('content')
 <x-page-header title="Encaissements" subtitle="Contrôle de caisse : tous les tickets émis, par période, caissière et mode de paiement.">
+<x-filtre-periode :periode="$filtres['periode']" :annees="$annees"
+    :conserver="['user_id' => $filtres['user_id'], 'moyen' => $filtres['mode'], 'type' => $filtres['type']]"/>
     <a href="{{ route('admin.paiements.export', request()->query()) }}" class="btn-light"><x-icon name="download" class="size-4"/> Excel (CSV)</a>
     <a href="{{ route('admin.paiements.pdf', request()->query()) }}" class="btn-light"><x-icon name="download" class="size-4"/> PDF</a>
 </x-page-header>
 
-<x-filtre-periode :periode="$filtres['periode']" :annees="$annees" class="mb-4"
-    :conserver="['user_id' => $filtres['user_id'], 'moyen' => $filtres['mode'], 'type' => $filtres['type']]"/>
+
 
 <form method="GET" class="card mb-6 flex flex-wrap items-end gap-3 p-4">
     @foreach($filtres['periode']->parametres() as $nom => $valeur)<input type="hidden" name="{{ $nom }}" value="{{ $valeur }}">@endforeach
