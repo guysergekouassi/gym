@@ -251,3 +251,26 @@ $$('[data-apercu]').forEach((champ) => {
         $$(`[data-apercu-cible="${champ.dataset.apercu}"]`).forEach((el) => { el.textContent = champ.value; });
     });
 });
+
+// --- Barre latérale : sections repliables (Quotidien / Pilotage / Administration) ---
+const memoire = {
+    lire: (cle) => { try { return localStorage.getItem(cle); } catch { return null; } },
+    ecrire: (cle, val) => { try { localStorage.setItem(cle, val); } catch { /* stockage indisponible */ } },
+};
+$$('[data-menu-section]').forEach((section) => {
+    const bouton = section.querySelector('[data-menu-bascule]');
+    const liens = section.querySelector('[data-menu-liens]');
+    const cle = `menu.${section.dataset.menuSection}`;
+    const appliquer = (ouvert) => {
+        liens.hidden = !ouvert;
+        bouton.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
+    };
+    // La section de la page en cours reste toujours ouverte
+    const contientPageActive = !!liens.querySelector('.nav-link.active');
+    appliquer(contientPageActive || memoire.lire(cle) !== 'ferme');
+    bouton.addEventListener('click', () => {
+        const ouvrir = liens.hidden;
+        appliquer(ouvrir);
+        memoire.ecrire(cle, ouvrir ? 'ouvert' : 'ferme');
+    });
+});
