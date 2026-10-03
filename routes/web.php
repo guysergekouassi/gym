@@ -38,6 +38,7 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
         Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('/paiements', [PaiementController::class, 'index'])->name('paiements.index');
             Route::get('/paiements/export', [PaiementController::class, 'export'])->name('paiements.export');
+            Route::get('/paiements/export-pdf', [PaiementController::class, 'exportPdf'])->middleware('throttle:10,1')->name('paiements.pdf');
             Route::post('/paiements/{paiement}/annuler', [PaiementController::class, 'annuler'])->name('paiements.annuler');
 
             Route::get('/formules', [FormuleController::class, 'index'])->name('formules.index');

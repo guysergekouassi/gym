@@ -59,6 +59,10 @@ Dans GymFlow (Administration → Pointeuses), l'état passe à **« En ligne »*
 
 ## Étape 5 — Enregistrer les membres
 
+**Quand poser le doigt ?** *Après* avoir créé la fiche dans GymFlow, au comptoir, pendant que le client est là :
+la fiche donne le numéro, la pointeuse reçoit ce numéro avec le nom, puis on enregistre le doigt sur ce numéro.
+(Si la pointeuse n'est pas encore reliée, on peut aussi créer l'utilisateur directement sur la pointeuse avec le **même numéro** que la fiche.)
+
 Pour chaque membre :
 
 1. Dans GymFlow, **Clients → Nouveau client**. Cliquez sur le bouton **« N° … »** : GymFlow attribue un numéro libre (ex. 13).

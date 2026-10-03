@@ -190,6 +190,20 @@ class SecuriteEtAdminTest extends TestCase
         $this->assertStringContainsString("'=CMD()", $csv);
     }
 
+    public function test_export_pdf_des_encaissements(): void
+    {
+        $this->actingAs($this->caissiere);
+        Client::create(['type' => Client::TYPE_JOURNALIER, 'nom' => '<script>alert(1)</script>', 'telephone' => '0700000098']);
+        $this->post('/caisse/journalier', ['telephone' => '0700000098', 'mode' => 'wave']);
+
+        $this->get('/admin/paiements/export-pdf')->assertForbidden();
+
+        $reponse = $this->actingAs($this->admin)->get('/admin/paiements/export-pdf?mode=periode&du='.today()->toDateString().'&au='.today()->toDateString());
+        $reponse->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $reponse->getContent());
+        $this->assertStringContainsString('encaissements_', $reponse->headers->get('content-disposition'));
+    }
+
     public function test_upload_photo_refuse_les_fichiers_non_images(): void
     {
         Storage::fake('public');
