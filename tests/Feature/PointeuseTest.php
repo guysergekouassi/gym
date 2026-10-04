@@ -122,6 +122,7 @@ class PointeuseTest extends TestCase
                 $this->evenement(null, 40, $t),       // doigt inconnu
                 $this->evenement(null, 21, $t),       // porte ouverte : ignoré
                 $this->evenement("1' OR 1=1", 38, $t), // numéro invalide : ignoré
+                $this->evenement('900000001', 38, $t), // employé (ouvre le menu) : ignoré
             ],
         ]])]);
 
@@ -132,6 +133,7 @@ class PointeuseTest extends TestCase
         $this->assertSame(3, Passage::count());
         $this->assertDatabaseHas('passages', ['client_id' => $abonne->id, 'statut' => 'autorise', 'lecteur_id' => $this->pointeuse->id]);
         $this->assertDatabaseHas('passages', ['empreinte_id' => '8', 'statut' => 'refuse', 'motif' => 'abonnement_expire']);
+        $this->assertDatabaseMissing('passages', ['empreinte_id' => '900000001']);
         $this->assertDatabaseHas('passages', ['empreinte_id' => null, 'motif' => 'empreinte_inconnue']);
         $this->assertNull($this->pointeuse->refresh()->derniere_erreur);
         $this->assertNotNull($this->pointeuse->dernier_evenement_le);

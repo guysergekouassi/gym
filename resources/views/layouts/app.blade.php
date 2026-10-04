@@ -40,6 +40,7 @@
                 @endunless
                 <a href="{{ route('caisse.index') }}" class="{{ $actif('caisse.*', 'recus.*') }}"><x-icon name="cash"/> Caisse</a>
                 <a href="{{ route('clients.index') }}" class="{{ $actif('clients.*') }}"><x-icon name="users"/> Clients</a>
+                <a href="{{ route('presences.index') }}" class="{{ $actif('presences.*') }}"><x-icon name="clock"/> Entrées / départs</a>
                 <a href="{{ route('accueil.index') }}" target="_blank" rel="noopener" class="nav-link"><x-icon name="fingerprint"/> Écran d'accueil <x-icon name="external" class="ml-auto size-4 opacity-50"/></a>
             </x-menu-section>
 

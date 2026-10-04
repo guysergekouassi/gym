@@ -51,7 +51,8 @@ class AccueilController extends Controller
             'autorise' => $passage->estAutorise(),
             'message' => $passage->message(),
             'methode' => $passage->methode,
-            'heure' => $passage->passe_le->format('H:i'),
+            'sens' => $passage->sens,
+            'heure' => $passage->passe_le->format('H:i:s'),
             'il_y_a_secondes' => (int) abs(now()->diffInSeconds($passage->passe_le)),
             'client' => $client ? [
                 'nom' => $client->nom_complet,
