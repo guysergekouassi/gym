@@ -8,14 +8,14 @@ use Illuminate\Console\Command;
 
 /**
  * Programme d'écoute des pointeuses : à laisser tourner pendant les heures d'ouverture
- * (lancé par demarrer.bat). Toutes les 3 secondes, pour chaque pointeuse :
+ * (lancé par demarrer-gymflow.bat). Toutes les 3 secondes, pour chaque pointeuse :
  * envoi des membres modifiés, puis récupération des nouveaux passages.
  */
 class EcouterPointeuses extends Command
 {
     protected $signature = 'pointeuse:ecouter {--une-fois : Un seul tour puis arrêt (test)} {--intervalle=3 : Secondes entre deux tours}';
 
-    protected $description = 'Relie l'application aux pointeuses Hikvision (passages et membres)';
+    protected $description = 'Relie GymFlow aux pointeuses Hikvision (passages et membres)';
 
     public function handle(PointeuseService $service): int
     {

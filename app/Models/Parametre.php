@@ -56,9 +56,6 @@ class Parametre extends Model
                 config(["salle.{$config}" => $valeurs[$cle]]);
             }
         }
-
-        // Le nom de l'application est celui de la salle, partout (titres, PDF…)
-        config(['app.name' => config('salle.nom')]);
     }
 
     /** Prix d'une entrée journalière : réglage admin, sinon valeur du .env. */

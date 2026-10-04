@@ -1,4 +1,4 @@
-# Gestion de salle de sport (Laravel)
+# GymFlow — Gestion de salle de sport (Laravel)
 
 Deux accès :
 
@@ -21,13 +21,13 @@ php artisan key:generate
 
 ## 2. Configurer le `.env`
 
-Par défaut le projet utilise SQLite (aucune installation : à la question de `php artisan migrate`, réponds `yes` pour créer le fichier). Pour MySQL, crée la base `salle` puis :
+Par défaut le projet utilise SQLite (aucune installation : à la question de `php artisan migrate`, réponds `yes` pour créer le fichier). Pour MySQL, crée la base `gymflow` puis :
 
 ```dotenv
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=salle
+DB_DATABASE=gymflow
 DB_USERNAME=root
 DB_PASSWORD=
 ```
@@ -54,14 +54,14 @@ Comptes créés — **le mot de passe doit être changé à la première connexi
 
 | Rôle | E-mail | Mot de passe |
 |---|---|---|
-| Admin | admin@salle.local | ChangeMoi!2026 |
-| Caissière | caisse@salle.local | ChangeMoi!2026 |
+| Admin | admin@gymflow.local | ChangeMoi!2026 |
+| Caissière | caisse@gymflow.local | ChangeMoi!2026 |
 
 ## 5. Pointeuse à empreinte (Hikvision DS-K1T808MFWX)
 
 Guides : **[docs/GUIDE-CONFIGURATION-POINTEUSE.md](docs/GUIDE-CONFIGURATION-POINTEUSE.md)** (branchement pas à pas, câble ou Wi-Fi) et **[docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md)** (installation chez le client, démarrage automatique, sauvegardes).
 
-En résumé : L'application dialogue avec la pointeuse par son API HTTP « ISAPI » (adresse IP + mot de passe admin de la pointeuse, stocké chiffré). Le programme `php artisan pointeuse:ecouter` (lancé par `demarrer.bat`) récupère les passages toutes les 3 s et envoie les membres avec la date de fin de leurs droits : la pointeuse refuse d'elle-même un abonnement terminé.
+En résumé : GymFlow dialogue avec la pointeuse par son API HTTP « ISAPI » (adresse IP + mot de passe admin de la pointeuse, stocké chiffré). Le programme `php artisan pointeuse:ecouter` (lancé par `demarrer-gymflow.bat`) récupère les passages toutes les 3 s et envoie les membres avec la date de fin de leurs droits : la pointeuse refuse d'elle-même un abonnement terminé.
 
 ## 6. Imprimante thermique (tickets)
 
@@ -80,7 +80,7 @@ En résumé : L'application dialogue avec la pointeuse par son API HTTP « ISAPI
 - En-têtes HTTP : CSP stricte (aucun script inline ou tiers), anti-clickjacking, `nosniff`, pas de cache des pages connectées (poste partagé).
 - Aucune ressource externe (CDN, polices) : rien ne peut être injecté par un tiers, et l'appli marche hors ligne.
 - Photos : JPG/PNG/WebP uniquement, renommées aléatoirement. Recherches protégées (paramètres liés, jokers échappés). Export CSV protégé contre l'injection de formules Excel.
-- Pointeuse : mot de passe chiffré, adresses du réseau local uniquement, aucune redirection suivie, aucune empreinte stockée par l'application ; l'application n'écoute que sur 127.0.0.1.
+- Pointeuse : mot de passe chiffré, adresses du réseau local uniquement, aucune redirection suivie, aucune empreinte stockée par l'application ; GymFlow n'écoute que sur 127.0.0.1.
 
 **Checklist de mise en production** : `APP_ENV=production`, `APP_DEBUG=false`, `php artisan key:generate` (clé unique), `SESSION_ENCRYPT=true`, HTTPS si accessible hors de la salle (+ `SESSION_SECURE_COOKIE=true`), `expose_php=Off` dans php.ini, sauvegarde quotidienne de la base, `php artisan config:cache route:cache view:cache`.
 
@@ -108,5 +108,5 @@ app/Http/Middleware/         VerifierRole, AuthentifierLecteur, ForcerChangement
 app/Services/                CaisseService, PointageService, KpiService, RecuService
 resources/views/             layouts, caisse, clients, dashboard, admin/*, accueil, recus, auth, errors
 resources/js/                app.js (interface), accueil.js (écran d'entrée + lecteur USB)
-tests/Feature/               ApplicationTest, SecuriteEtAdminTest
+tests/Feature/               GymFlowTest, SecuriteEtAdminTest
 ```
