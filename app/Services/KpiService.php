@@ -191,10 +191,11 @@ class KpiService
     }
 
     /** Chiffres d'un jour pour la caisse (un caissier, ou toute la salle). */
-    public function chiffresCaisse(CarbonInterface $jour, ?User $caissier = null): array
+    public function chiffresCaisse(CarbonInterface $jour, ?User $caissier = null, ?CarbonInterface $jusqua = null): array
     {
+        $bornes = [$jour->copy()->startOfDay(), $jusqua ?? $jour->copy()->endOfDay()];
         $paiements = Paiement::valides()
-            ->whereDate('created_at', $jour->toDateString())
+            ->whereBetween('created_at', $bornes)
             ->when($caissier, fn ($q) => $q->where('user_id', $caissier->id))
             ->with('abonnement:id,est_renouvellement')
             ->get();
@@ -207,14 +208,18 @@ class KpiService
             'passages_vendus' => (int) $paiements->where('type', Paiement::TYPE_JOURNALIER)->sum('quantite'),
             'abonnements' => $abonnements->filter(fn ($p) => ! $p->abonnement?->est_renouvellement)->count(),
             'renouvellements' => $abonnements->filter(fn ($p) => $p->abonnement?->est_renouvellement)->count(),
-            'entrees' => Passage::whereDate('passe_le', $jour->toDateString())->where('statut', Passage::STATUT_AUTORISE)->count(),
+            'entrees' => Passage::whereBetween('passe_le', $bornes)->where('statut', Passage::STATUT_AUTORISE)->count(),
         ];
     }
 
-    /** Chiffres clés d'une période (et non plus seulement du jour). */
-    public function chiffresPeriode(Periode $p): array
+    /**
+     * Chiffres clés d'une période. $jusqua coupe la période à un instant précis :
+     * on compare ainsi « aujourd'hui jusqu'à 17 h » à « hier jusqu'à 17 h », et non à toute la journée d'hier.
+     */
+    public function chiffresPeriode(Periode $p, ?CarbonInterface $jusqua = null): array
     {
-        $bornes = [$p->du->startOfDay(), $p->au->endOfDay()];
+        $fin = $p->au->endOfDay();
+        $bornes = [$p->du->startOfDay(), $jusqua ? $fin->min($jusqua) : $fin];
         $paiements = Paiement::valides()->whereBetween('created_at', $bornes)->get(['montant']);
 
         return [
