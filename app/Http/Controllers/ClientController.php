@@ -117,7 +117,7 @@ class ClientController extends Controller
             'client' => $client,
             'finDroits' => $client->finDesDroits(),
             'passages' => $client->passages()->latest('passe_le')->limit(30)->get(),
-            'venues30j' => $client->passages()->where('statut', Passage::STATUT_AUTORISE)
+            'venues30j' => $client->passages()->venues()
                 ->where('passe_le', '>=', now()->subDays(30))->count(),
         ]);
     }

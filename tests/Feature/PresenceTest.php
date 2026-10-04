@@ -73,6 +73,10 @@ class PresenceTest extends TestCase
             ->assertSee('10:30:20')
             ->assertSee('2 h 30 min 15 s');
 
+        // Le tableau de bord compte une venue, pas deux (le départ n'est pas une entrée)
+        $periode = \App\Support\Periode::depuisRequete(\Illuminate\Http\Request::create('/dashboard'));
+        $this->assertSame(1, app(\App\Services\KpiService::class)->chiffresPeriode($periode)['entrees']);
+
         $this->get('/entrees-departs?q=inconnu')->assertOk()->assertDontSee('08:00:05');
 
         // Accessible à la caissière aussi

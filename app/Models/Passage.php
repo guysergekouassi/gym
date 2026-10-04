@@ -55,6 +55,13 @@ class Passage extends Model
         return $this->belongsTo(Paiement::class);
     }
 
+    /** Venues : passages autorisés hors départs et badges en trop (un membre = une venue par jour). */
+    public function scopeVenues(\Illuminate\Database\Eloquent\Builder $q): void
+    {
+        $q->where('statut', self::STATUT_AUTORISE)
+            ->where(fn ($w) => $w->whereNull('sens')->orWhere('sens', self::SENS_ENTREE));
+    }
+
     public function estAutorise(): bool
     {
         return $this->statut === self::STATUT_AUTORISE;
