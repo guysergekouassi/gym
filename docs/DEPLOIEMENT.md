@@ -85,6 +85,24 @@ Pour aller plus loin :
 - **Redémarrage après coupure de courant** : dans le BIOS de certains PC fixes, l'option « Restore on AC power loss » = *Power On*.
 - **Pas de mise en veille** : Windows + I → Système → Alimentation → Mettre en veille : *Jamais* (sur secteur).
 
+### Imprimante à tickets (impression directe)
+
+`demarrer-gymflow.bat` ouvre GymFlow dans une **fenêtre dédiée** de Chrome (ou Edge) réglée pour imprimer **sans fenêtre de confirmation** : à chaque encaissement, le ticket part tout seul sur l'**imprimante par défaut de Windows**.
+
+1. Installez l'imprimante thermique avec le pilote du fabricant (CD ou site du fabricant), papier **80 mm**.
+2. Windows + I → Bluetooth et appareils → **Imprimantes et scanners** :
+   - désactivez **« Laisser Windows gérer mon imprimante par défaut »** ;
+   - cliquez sur l'imprimante thermique → **Définir par défaut**.
+3. Fermez toutes les fenêtres GymFlow et relancez `demarrer-gymflow.bat`.
+
+| Situation | Ce qui se passe |
+|---|---|
+| Imprimante allumée | Le ticket sort aussitôt, la caisse revient toute seule |
+| Imprimante éteinte, débranchée ou sans papier | Windows garde le ticket **en file d'attente** et l'imprime dès son retour ; il reste réimprimable depuis Encaissements |
+| Aucune imprimante installée | Windows prend « Microsoft Print to PDF » et propose d'**enregistrer un PDF** : c'est ce qu'on voit pendant les tests, c'est normal |
+
+> Ne pas ouvrir GymFlow depuis un Chrome ordinaire pour encaisser : il afficherait la fenêtre d'impression à chaque ticket. Utilisez la fenêtre ouverte par `demarrer-gymflow.bat` (la 1ʳᵉ fois, connectez-vous dedans : elle a son propre profil).
+
 ### Sauvegardes
 
 À chaque démarrage, `demarrer-gymflow.bat` fait une **sauvegarde du jour** de la base dans `storage\app\sauvegardes\` (les 30 dernières sont gardées).
