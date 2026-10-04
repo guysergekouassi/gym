@@ -30,7 +30,7 @@ class PaiementController extends Controller
 
         return view('admin.paiements.index', [
             'filtres' => $filtres,
-            'paiements' => (clone $base)->with(['client', 'user:id,name', 'abonnement.formule', 'annulePar:id,name'])
+            'paiements' => (clone $base)->with(['client', 'user:id,name,role', 'abonnement.formule', 'annulePar:id,name'])
                 ->latest('id')->paginate(30)->withQueryString(),
             'total' => (clone $valides)->sum('montant'),
             'nombre' => (clone $valides)->count(),
@@ -54,7 +54,7 @@ class PaiementController extends Controller
             $sortie = fopen('php://output', 'w');
             fwrite($sortie, "\xEF\xBB\xBF"); // BOM : accents corrects dans Excel
 
-            fputcsv($sortie, ['Reçu', 'Date', 'Client', 'Téléphone', 'Objet', 'Mode', 'Référence', 'Montant', 'Caissière', 'Statut'], ';');
+            fputcsv($sortie, ['Reçu', 'Date', 'Client', 'Téléphone', 'Objet', 'Mode', 'Référence', 'Montant', 'Encaissé par', 'Statut'], ';');
 
             $requete->chunk(500, function ($paiements) use ($sortie) {
                 foreach ($paiements as $p) {
