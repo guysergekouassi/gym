@@ -411,3 +411,13 @@ $$('[data-horaire]').forEach((ligne) => {
     etat.addEventListener('change', majHoraire);
     ligne.querySelector('[data-horaire-effacer]').addEventListener('click', () => { etat.value = ''; majHoraire(); });
 });
+
+// Page Pointeuses : tant que des envois sont en attente, la page se recharge seule
+// (sauf si on est en train de remplir un formulaire)
+const aActualiser = document.querySelector('[data-actualiser]');
+if (aActualiser) {
+    setTimeout(() => {
+        const saisie = document.activeElement?.closest('form');
+        if (!saisie && !document.querySelector('dialog[open]')) window.location.reload();
+    }, Number(aActualiser.dataset.actualiser) * 1000);
+}
