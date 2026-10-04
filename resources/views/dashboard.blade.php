@@ -31,16 +31,16 @@
 {{-- Chiffres clés de la période choisie --}}
 <div class="mb-5 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 2xl:gap-5">
     <x-kpi label="Clients inscrits" :value="$chiffres['clients_inscrits']" icon="users" tone="green"
-           :variation="KpiService::variation($chiffres['clients_inscrits'], $avant['clients_inscrits'])" :reference="$ref"
+           :variation="KpiService::variation($chiffres['clients_inscrits'], $avant['clients_inscrits'])" :reference="$ref" :comparable="true"
            :hint="$clientsTotal.' clients au total'"/>
     <x-kpi :label="'Revenus '.$suffixe" :value="Fcfa::format($chiffres['recette'])" icon="cash" tone="purple"
-           :variation="KpiService::variation($chiffres['recette'], $avant['recette'])" :reference="$ref"/>
+           :variation="KpiService::variation($chiffres['recette'], $avant['recette'])" :reference="$ref" :comparable="true"/>
     <x-kpi label="Abonnements actifs" :value="$chiffres['abonnements_actifs']" icon="calendar" tone="blue"
-           :variation="KpiService::variation($chiffres['abonnements_actifs'], $avant['abonnements_actifs'])" :reference="$ref"/>
+           :variation="KpiService::variation($chiffres['abonnements_actifs'], $avant['abonnements_actifs'])" :reference="$ref" :comparable="true"/>
     <x-kpi :label="'Entrées '.$suffixe" :value="$chiffres['entrees']" icon="user" tone="orange"
-           :variation="KpiService::variation($chiffres['entrees'], $avant['entrees'])" :reference="$ref"/>
+           :variation="KpiService::variation($chiffres['entrees'], $avant['entrees'])" :reference="$ref" :comparable="true"/>
     <x-kpi :label="'Tickets vendus '.($periode->granularite === 'jour' ? '' : $suffixe)" :value="$chiffres['tickets']" icon="ticket" tone="purple"
-           :variation="KpiService::variation($chiffres['tickets'], $avant['tickets'])" :reference="$ref"/>
+           :variation="KpiService::variation($chiffres['tickets'], $avant['tickets'])" :reference="$ref" :comparable="true"/>
 </div>
 
 <div class="mb-5 grid gap-5 lg:grid-cols-12">

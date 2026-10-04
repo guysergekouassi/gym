@@ -82,6 +82,7 @@
 @layer components {
     .pastille { @apply inline-flex size-12 shrink-0 items-center justify-center rounded-full; }
     .tendance-hausse { @apply inline-flex items-center gap-1 text-xs font-semibold text-emerald-600; }
+    .tendance-stable { @apply inline-flex items-center gap-1 text-xs font-semibold text-slate-500; }
     .tendance-baisse { @apply inline-flex items-center gap-1 text-xs font-semibold text-red-600; }
 }
 

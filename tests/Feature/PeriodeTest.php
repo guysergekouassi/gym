@@ -105,4 +105,21 @@ class PeriodeTest extends TestCase
 
         $this->get('/admin/paiements?annee='.now()->year.'&mois=')->assertOk()->assertViewHas('nombre', 2);
     }
+
+    public function test_comparaison_a_la_meme_heure(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-04 12:00:00'));
+        $p = $this->periode([]);
+        $this->assertSame('2026-10-03 12:00:00', $p->instantComparable()->format('Y-m-d H:i:s'));
+        $this->assertSame('par rapport à la veille à la même heure', $p->reference());
+
+        // Paiement d'hier à 18 h : il n'entre pas dans la comparaison de midi
+        $client = Client::create(['nom' => 'Hier', 'type' => Client::TYPE_JOURNALIER]);
+        $paiement = Paiement::create(['client_id' => $client->id, 'user_id' => User::factory()->create()->id, 'type' => Paiement::TYPE_JOURNALIER, 'montant' => 2000, 'mode' => 'especes', 'numero_recu' => 'R-T1']);
+        $paiement->forceFill(['created_at' => '2026-10-03 18:00:00'])->save();
+
+        $kpi = app(\App\Services\KpiService::class);
+        $this->assertSame(0, $kpi->chiffresPeriode($p->precedente(), $p->instantComparable())['recette']);
+        $this->assertSame(2000, $kpi->chiffresPeriode($p->precedente())['recette']);
+    }
 }

@@ -1,4 +1,4 @@
-@props(['label', 'value', 'icon' => 'chart', 'tone' => 'green', 'variation' => null, 'reference' => 'par rapport à hier', 'hint' => null])
+@props(['label', 'value', 'icon' => 'chart', 'tone' => 'green', 'variation' => null, 'reference' => 'par rapport à hier', 'hint' => null, 'comparable' => false])
 @php
     $tons = [
         'green' => 'bg-emerald-50 text-emerald-600',
@@ -18,7 +18,9 @@
             <p class="mt-1 whitespace-nowrap text-[clamp(0.8rem,8.5cqi,1.6rem)] font-bold leading-tight tracking-tight text-slate-900">{{ $value }}</p>
             @if($variation !== null)
                 <p class="mt-2">
-                    @if($variation >= 0)
+                    @if($variation == 0)
+                        <span class="tendance-stable">= 0 %</span>
+                    @elseif($variation > 0)
                         <span class="tendance-hausse"><x-icon name="arrow-up" class="size-3.5"/> +{{ $variation }} %</span>
                     @else
                         <span class="tendance-baisse"><x-icon name="arrow-down" class="size-3.5"/> {{ $variation }} %</span>
@@ -27,6 +29,10 @@
                 <p class="text-xs text-slate-500">{{ $reference }}</p>
             @elseif($hint)
                 <p class="mt-2 text-xs text-slate-500">{{ $hint }}</p>
+            @elseif($comparable)
+                {{-- Rien à comparer (aucune donnée sur la période précédente) : pas de pourcentage trompeur --}}
+                <p class="mt-2"><span class="tendance-stable">—</span></p>
+                <p class="text-xs text-slate-500">rien à comparer {{ str_replace('par rapport à', 'avec', $reference) }}</p>
             @endif
         </div>
     </div>

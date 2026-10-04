@@ -16,7 +16,8 @@ class JourneeController extends Controller
 
         return view('journee', [
             'aujourdhui' => $kpi->chiffresCaisse(today(), $caissier),
-            'hier' => $kpi->chiffresCaisse(today()->subDay(), $caissier),
+            // Hier jusqu'à la même heure : comparaison juste en cours de journée
+            'hier' => $kpi->chiffresCaisse(today()->subDay(), $caissier, now()->subDay()),
             'recettes' => $kpi->recettesParJour(7, $caissier),
             'transactions' => Paiement::with(['client', 'abonnement.formule'])
                 ->where('user_id', $caissier->id)
