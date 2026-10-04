@@ -48,6 +48,7 @@ class PresenceController extends Controller
             'annees' => Exercices::disponibles(),
             'lignes' => $lignes,
             'salleFermee' => $salleFermee,
+            'finDuJour' => Horaires::finDuJour(CarbonImmutable::today()),
             'chiffres' => [
                 'entrees' => Passage::where('sens', Passage::SENS_ENTREE)->whereBetween('passe_le', $bornes)->count(),
                 'departs' => Passage::where('sens', Passage::SENS_DEPART)->whereBetween('passe_le', $bornes)->count(),

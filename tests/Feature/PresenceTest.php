@@ -108,4 +108,20 @@ class PresenceTest extends TestCase
         $this->travelTo(CarbonImmutable::parse('2026-10-05 10:00:00'));
         $this->get('/entrees-departs?annee=2026&mois=10&jour=4')->assertSee('08:00:05')->assertSee('Non badgé');
     }
+
+    public function test_depart_seulement_a_partir_de_l_heure_de_fin(): void
+    {
+        \App\Support\Horaires::enregistrer([7 => ['etat' => 'ouvert', 'debut' => '06:00', 'fin' => '21:00']]); // 04/10/2026 = dimanche
+
+        $this->assertSame(Passage::SENS_ENTREE, $this->badge('08:00:05')->sens);
+        $avant = $this->badge('10:30:20');
+        $this->assertSame(Passage::SENS_DEJA, $avant->sens); // avant 21:00 : pas un départ
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-04 10:30:25'));
+        $this->actingAs($this->admin)->getJson('/accueil/dernier')
+            ->assertJson(['sens' => 'deja', 'detail' => 'Arrivée déjà enregistrée. Le départ se badge à partir de 21:00.']);
+
+        $this->assertSame(Passage::SENS_DEPART, $this->badge('21:00:00')->sens);
+        $this->assertSame(Passage::SENS_DEJA, $this->badge('21:30:00')->sens);
+    }
 }

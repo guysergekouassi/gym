@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\Passage;
 use App\Services\PointageService;
 use App\Support\Empreinte;
+use App\Support\Horaires;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -52,6 +53,7 @@ class AccueilController extends Controller
             'message' => $passage->message(),
             'methode' => $passage->methode,
             'sens' => $passage->sens,
+            'detail' => $this->detail($passage),
             'heure' => $passage->passe_le->format('H:i:s'),
             'il_y_a_secondes' => (int) abs(now()->diffInSeconds($passage->passe_le)),
             'client' => $client ? [
@@ -63,5 +65,21 @@ class AccueilController extends Controller
             'fin_droits' => $finDroits?->format('d/m/Y'),
             'jours_restants' => $finDroits ? max(0, (int) today()->diffInDays($finDroits, false)) : null,
         ];
+    }
+
+    /** Badge en trop avant l'heure de fin : on indique à partir de quand le départ se badge. */
+    private function detail(Passage $passage): ?string
+    {
+        if ($passage->sens !== Passage::SENS_DEJA) {
+            return null;
+        }
+
+        $fin = Horaires::finDuJour($passage->passe_le);
+        $aDejaUnDepart = Passage::where('client_id', $passage->client_id)
+            ->where('sens', Passage::SENS_DEPART)
+            ->whereDate('passe_le', $passage->passe_le->toDateString())
+            ->exists();
+
+        return $fin && ! $aDejaUnDepart ? "Arrivée déjà enregistrée. Le départ se badge à partir de {$fin}." : null;
     }
 }

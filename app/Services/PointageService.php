@@ -7,6 +7,7 @@ use App\Models\Lecteur;
 use App\Models\Paiement;
 use App\Models\Passage;
 use App\Models\User;
+use App\Support\Horaires;
 use Carbon\CarbonInterface;
 
 class PointageService
@@ -126,7 +127,10 @@ class PointageService
         ]);
     }
 
-    /** 1er badge autorisé du jour = arrivée, 2e = départ, ensuite séance déjà enregistrée. */
+    /**
+     * 1er badge autorisé du jour = arrivée ; départ = badge suivant fait à partir de l'heure
+     * de fin des séances du jour (Paramètres) ; tout autre badge = séance déjà enregistrée.
+     */
     private function sens(Client $client, CarbonInterface $quand): string
     {
         $dejaBadge = Passage::where('client_id', $client->id)
@@ -135,11 +139,17 @@ class PointageService
             ->whereBetween('passe_le', [$quand->copy()->startOfDay(), $quand->copy()->endOfDay()])
             ->count();
 
-        return match ($dejaBadge) {
-            0 => Passage::SENS_ENTREE,
-            1 => Passage::SENS_DEPART,
-            default => Passage::SENS_DEJA,
-        };
+        if ($dejaBadge === 0) {
+            return Passage::SENS_ENTREE;
+        }
+
+        // Le départ ne se badge qu'à partir de l'heure de fin des séances (si elle est renseignée)
+        $fin = Horaires::finDuJour($quand);
+        if ($dejaBadge === 1 && ($fin === null || $quand->format('H:i') >= $fin)) {
+            return Passage::SENS_DEPART;
+        }
+
+        return Passage::SENS_DEJA;
     }
 
     /** @return array{0: bool, 1: ?string} */
