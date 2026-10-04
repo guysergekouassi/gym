@@ -36,7 +36,7 @@ class SecuriteEtAdminTest extends TestCase
     {
         $this->caissiere->update(['doit_changer_mdp' => true]);
 
-        $this->post('/login', ['email' => 'caisse@salle.local', 'password' => 'ChangeMoi!2026'])
+        $this->post('/login', ['email' => 'caisse@gymflow.local', 'password' => 'ChangeMoi!2026'])
             ->assertRedirect(route('mot-de-passe.edit'));
         $this->get('/caisse')->assertRedirect(route('mot-de-passe.edit'));
 
@@ -56,18 +56,18 @@ class SecuriteEtAdminTest extends TestCase
     public function test_verrouillage_apres_cinq_echecs_de_connexion(): void
     {
         for ($i = 0; $i < 5; $i++) {
-            $this->post('/login', ['email' => 'admin@salle.local', 'password' => 'mauvais'.$i]);
+            $this->post('/login', ['email' => 'admin@gymflow.local', 'password' => 'mauvais'.$i]);
         }
 
         // Même le bon mot de passe est refusé pendant le blocage
-        $this->post('/login', ['email' => 'admin@salle.local', 'password' => 'ChangeMoi!2026'])
+        $this->post('/login', ['email' => 'admin@gymflow.local', 'password' => 'ChangeMoi!2026'])
             ->assertSessionHasErrors(['email' => 'Trop de tentatives. Réessayez dans 5 minute(s).']);
         $this->assertGuest();
     }
 
     public function test_compte_desactive_ne_peut_plus_rien_faire(): void
     {
-        $this->post('/login', ['email' => 'caisse@salle.local', 'password' => 'ChangeMoi!2026']);
+        $this->post('/login', ['email' => 'caisse@gymflow.local', 'password' => 'ChangeMoi!2026']);
         $this->assertAuthenticated();
 
         $this->caissiere->update(['actif' => false]);
@@ -90,7 +90,7 @@ class SecuriteEtAdminTest extends TestCase
         $this->post('/admin/utilisateurs', [
             'name' => 'Pirate', 'email' => 'p@x.ci', 'role' => 'admin', 'password' => 'Azerty12345', 'password_confirmation' => 'Azerty12345',
         ])->assertForbidden();
-        $this->put("/admin/utilisateurs/{$this->caissiere->id}", ['name' => 'X', 'email' => 'caisse@salle.local', 'role' => 'admin', 'actif' => 1])
+        $this->put("/admin/utilisateurs/{$this->caissiere->id}", ['name' => 'X', 'email' => 'caisse@gymflow.local', 'role' => 'admin', 'actif' => 1])
             ->assertForbidden();
 
         $this->assertSame(User::ROLE_CAISSIER, $this->caissiere->fresh()->role);
@@ -230,14 +230,14 @@ class SecuriteEtAdminTest extends TestCase
     public function test_gestion_des_comptes_et_garde_fous(): void
     {
         $this->actingAs($this->admin)->post('/admin/utilisateurs', [
-            'name' => 'Awa', 'email' => 'awa@salle.local', 'role' => User::ROLE_CAISSIER,
+            'name' => 'Awa', 'email' => 'awa@gymflow.local', 'role' => User::ROLE_CAISSIER,
             'password' => 'Provisoire2026', 'password_confirmation' => 'Provisoire2026',
         ])->assertRedirect(route('admin.utilisateurs.index'));
-        $this->assertTrue(User::where('email', 'awa@salle.local')->firstOrFail()->doit_changer_mdp);
+        $this->assertTrue(User::where('email', 'awa@gymflow.local')->firstOrFail()->doit_changer_mdp);
 
         // L'admin ne peut pas se désactiver ni se rétrograder lui-même
         $this->put("/admin/utilisateurs/{$this->admin->id}", [
-            'name' => 'Admin', 'email' => 'admin@salle.local', 'role' => User::ROLE_CAISSIER, 'actif' => 1,
+            'name' => 'Admin', 'email' => 'admin@gymflow.local', 'role' => User::ROLE_CAISSIER, 'actif' => 1,
         ])->assertSessionHas('erreur');
         $this->assertTrue($this->admin->fresh()->isAdmin());
     }
