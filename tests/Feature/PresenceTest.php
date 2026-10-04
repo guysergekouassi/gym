@@ -92,4 +92,20 @@ class PresenceTest extends TestCase
 
         $this->assertSame(2, \App\Support\Empreinte::prochainNumero());
     }
+
+    public function test_depart_non_badge(): void
+    {
+        $this->badge('08:00:05');
+        \App\Support\Horaires::enregistrer([7 => ['etat' => 'ouvert', 'debut' => '06:00', 'fin' => '21:00']]); // 04/10/2026 = dimanche
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-04 12:00:00'));
+        $this->actingAs($this->admin)->get('/entrees-departs')->assertSee('Encore présent')->assertDontSee('Non badgé');
+
+        // Après la fermeture, ou les jours suivants : « Non badgé »
+        $this->travelTo(CarbonImmutable::parse('2026-10-04 21:30:00'));
+        $this->get('/entrees-departs')->assertSee('Non badgé')->assertDontSee('Encore présent');
+
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 10:00:00'));
+        $this->get('/entrees-departs?annee=2026&mois=10&jour=4')->assertSee('08:00:05')->assertSee('Non badgé');
+    }
 }

@@ -30,7 +30,7 @@
 <div class="entete">
     <h1>{{ config('salle.nom') }} — Encaissements</h1>
     <p>{{ $filtres['periode']->libelle() }}
-        @if($caissier) · Caissière : {{ $caissier }}@endif
+        @if($caissier) · Encaissé par : {{ $caissier }}@endif
         @if($filtres['mode']) · Mode : {{ Paiement::MODES[$filtres['mode']] ?? $filtres['mode'] }}@endif
         @if($filtres['type']) · {{ Paiement::TYPES[$filtres['type']] ?? $filtres['type'] }}@endif
     </p>
@@ -44,7 +44,7 @@
         <td><div class="petit">Par mode de paiement</div>
             @forelse($parMode as $l)<div>{{ Paiement::MODES[$l->mode] ?? $l->mode }} ({{ $l->nombre }}) : <b>{{ Fcfa::format($l->total) }}</b></div>@empty<div>—</div>@endforelse
         </td>
-        <td><div class="petit">Par caissière</div>
+        <td><div class="petit">Par personne (encaissé par)</div>
             @forelse($parCaissier as $l)<div>{{ $l->user?->name ?? '—' }} ({{ $l->nombre }}) : <b>{{ Fcfa::format($l->total) }}</b></div>@empty<div>—</div>@endforelse
         </td>
     </tr>
@@ -52,18 +52,18 @@
 
 <table class="liste">
     <thead>
-    <tr><th>Ticket</th><th>Date</th><th>Client</th><th>Objet</th><th>Mode</th><th>Référence</th><th>Caissière</th><th class="droite">Montant</th><th>Statut</th></tr>
+    <tr><th>Ticket</th><th>Date</th><th>Encaissé par</th><th>Client</th><th>Objet</th><th>Mode</th><th>Référence</th><th class="droite">Montant</th><th>Statut</th></tr>
     </thead>
     <tbody>
     @forelse($paiements as $p)
         <tr class="{{ $p->estAnnule() ? 'annule' : '' }}">
             <td>{{ $p->numero_recu }}</td>
             <td>{{ $p->created_at->format('d/m/Y H:i') }}</td>
+            <td>{{ $p->user?->name ?? '—' }}</td>
             <td>{{ $p->client?->nom_complet ?? 'Anonyme' }}</td>
             <td>{{ $p->abonnement ? 'Abonnement '.$p->abonnement->formule->nom : 'Passage'.($p->quantite > 1 ? ' × '.$p->quantite : '') }}</td>
             <td>{{ Paiement::MODES[$p->mode] ?? $p->mode }}</td>
             <td>{{ $p->reference }}</td>
-            <td>{{ $p->user?->name ?? '—' }}</td>
             <td class="droite">{{ Fcfa::format($p->montant) }}</td>
             <td>{{ $p->estAnnule() ? 'Annulé' : 'Valide' }}</td>
         </tr>

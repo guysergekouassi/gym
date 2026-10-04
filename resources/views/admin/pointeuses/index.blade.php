@@ -9,7 +9,8 @@
 
 <div class="grid gap-6 xl:grid-cols-3">
     <div class="space-y-6 xl:col-span-2">
-        <div class="card overflow-hidden">
+        {{-- Envois en attente : la page se recharge seule jusqu'à « À jour » --}}
+        <div class="card overflow-hidden" @if($pointeuses->sum('en_attente') > 0) data-actualiser="4" @endif>
             <div class="card-header"><h2 class="card-title">Pointeuses</h2></div>
             <div class="overflow-x-auto">
                 <table class="table">
@@ -30,7 +31,12 @@
                             </td>
                             <td class="font-mono text-xs">{{ $p->adresse_ip }}:{{ $p->port }}</td>
                             <td class="text-xs">
-                                @if($p->en_attente)<span class="pill-amber">{{ $p->en_attente }} en attente</span>@endif
+                                @if($p->en_attente)
+                                    <span class="pill-amber">{{ $p->en_attente }} en attente</span>
+                                    @if($p->attente_depuis && \Illuminate\Support\Carbon::parse($p->attente_depuis)->lt(now()->subSeconds(30)))
+                                        <span class="mt-1 block max-w-48 text-xs text-red-600">Bloqué ? La fenêtre « Pointeuse » doit être ouverte : relancez <code>demarrer.bat</code>.</span>
+                                    @endif
+                                @endif
                                 @if($p->en_erreur)<span class="pill-red">{{ $p->en_erreur }} en erreur</span>@endif
                                 @if(! $p->en_attente && ! $p->en_erreur)<span class="text-slate-400">À jour</span>@endif
                             </td>
@@ -61,10 +67,10 @@
             <ol class="list-decimal space-y-1.5 pl-5">
                 <li>La pointeuse et ce PC sont reliés (câble réseau direct, box ou Wi-Fi) : voir le guide d'installation.</li>
                 <li>Renseignez l'adresse IP de la pointeuse et le mot de passe choisi à son activation, puis <b>Tester</b>.</li>
-                <li>Le programme d'écoute doit tourner : il est lancé par <code>demarrer-gymflow.bat</code> (fenêtre « Pointeuse »).</li>
+                <li>Le programme d'écoute doit tourner : il est lancé par <code>demarrer.bat</code> (fenêtre « Pointeuse »).</li>
                 <li>Cliquez sur « Envoyer les membres », puis enregistrez le doigt de chaque membre sur la pointeuse.</li>
             </ol>
-            <p class="mt-3 text-xs text-slate-500">La pointeuse refuse d'elle-même un membre dont l'abonnement est terminé : GymFlow lui envoie la date de fin à chaque paiement.</p>
+            <p class="mt-3 text-xs text-slate-500">La pointeuse refuse d'elle-même un membre dont l'abonnement est terminé : L'application lui envoie la date de fin à chaque paiement.</p>
         </div>
     </div>
 

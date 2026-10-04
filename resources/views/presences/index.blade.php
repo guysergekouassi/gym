@@ -19,7 +19,7 @@
 <div class="mb-6 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 2xl:gap-5">
     <x-kpi :label="'Entrées '.$periode->suffixe()" :value="$chiffres['entrees']" icon="arrow-right" tone="green" hint="arrivées (badge ou ticket)"/>
     <x-kpi :label="'Départs '.$periode->suffixe()" :value="$chiffres['departs']" icon="logout" tone="blue" hint="2e badge du jour"/>
-    <x-kpi label="Présents en ce moment" :value="$chiffres['presents']" icon="users" tone="orange" hint="arrivés aujourd'hui, pas encore repartis"/>
+    <x-kpi label="Présents en ce moment" :value="$chiffres['presents']" icon="users" tone="orange" :hint="$salleFermee ? 'salle fermée' : 'arrivés aujourd\'hui, pas encore repartis'"/>
     <x-kpi label="Durée moyenne" :value="PresenceController::duree($chiffres['duree_moyenne'])" icon="clock" tone="purple" hint="entre l'arrivée et le départ"/>
     <x-kpi :label="'Accès refusés '.$periode->suffixe()" :value="$chiffres['refus']" icon="x" tone="red" hint="abonnement expiré, doigt inconnu…"/>
 </div>
@@ -66,12 +66,12 @@
                     <td class="whitespace-nowrap">
                         @if($ligne->depart_le)
                             <span class="font-mono font-semibold text-sky-700">{{ $ligne->depart_le->format('H:i:s') }}</span>
-                        @elseif($ligne->methode === Passage::METHODE_EMPREINTE && $ligne->passe_le->isToday())
+                        @elseif($ligne->methode === Passage::METHODE_EMPREINTE && $ligne->passe_le->isToday() && ! $salleFermee)
                             <span class="pill-green">Encore présent</span>
                         @elseif($ligne->methode === Passage::METHODE_EMPREINTE)
-                            <span class="pill-gray">Départ non badgé</span>
+                            <span class="pill-gray" title="Le membre n'a pas badgé en sortant">Non badgé</span>
                         @else
-                            <span class="text-slate-400">—</span>
+                            <span class="pill-gray" title="Entrée par ticket de caisse : pas de badge de sortie">Non défini</span>
                         @endif
                     </td>
                     <td class="whitespace-nowrap text-slate-600">{{ $ligne->depart_le ? PresenceController::duree((int) $ligne->passe_le->diffInSeconds($ligne->depart_le)) : '—' }}</td>

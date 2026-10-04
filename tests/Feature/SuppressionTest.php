@@ -89,4 +89,28 @@ class SuppressionTest extends TestCase
 
         \Illuminate\Support\Facades\File::deleteDirectory($dossier);
     }
+
+    public function test_effacer_les_donnees_de_test(): void
+    {
+        $this->actingAs($this->admin)->post('/admin/pointeuses', [
+            'nom' => 'Entrée', 'adresse_ip' => '192.168.50.64', 'port' => 80, 'identifiant' => 'admin', 'mot_de_passe' => 'Secret.Pointeuse1',
+        ]);
+        $pointeuse = Lecteur::where('adresse_ip', '192.168.50.64')->firstOrFail();
+        $client = Client::create(['nom' => 'Test', 'type' => Client::TYPE_ABONNE, 'empreinte_id' => '1']);
+        $this->actingAs($this->caissiere)->post('/caisse/abonnement', ['client_id' => $client->id, 'formule_id' => Formule::value('id'), 'mode' => 'especes']);
+        $this->post('/caisse/journalier', ['mode' => 'especes']);
+        $this->assertSame(2, Paiement::count());
+
+        // Mauvaise confirmation : rien n'est effacé
+        $this->artisan('salle:effacer-donnees')->expectsQuestion('Tapez EFFACER pour confirmer', 'non')->assertFailed();
+        $this->assertSame(2, Paiement::count());
+
+        $this->artisan('salle:effacer-donnees')->expectsQuestion('Tapez EFFACER pour confirmer', 'EFFACER')->assertSuccessful();
+
+        $this->assertSame([0, 0, 0, 0], [Client::withTrashed()->count(), Paiement::count(), \App\Models\Abonnement::count(), \App\Models\Passage::count()]);
+        $this->assertSame(2, User::count());
+        $this->assertGreaterThan(0, Formule::count());
+        // Le membre de test est retiré de la pointeuse
+        $this->assertSame(['action' => 'supprimer', 'numero' => '1'], json_decode($pointeuse->commandes()->sole()->commande, true));
+    }
 }

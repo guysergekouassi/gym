@@ -11,7 +11,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::firstOrCreate(['email' => 'admin@gymflow.local'], [
+        User::firstOrCreate(['email' => 'admin@salle.local'], [
             'name' => 'Administrateur',
             'password' => 'ChangeMoi!2026',
             'role' => User::ROLE_ADMIN,
@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
             'doit_changer_mdp' => true,
         ]);
 
-        User::firstOrCreate(['email' => 'caisse@gymflow.local'], [
+        User::firstOrCreate(['email' => 'caisse@salle.local'], [
             'name' => 'Caissière',
             'password' => 'ChangeMoi!2026',
             'role' => User::ROLE_CAISSIER,

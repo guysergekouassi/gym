@@ -24,7 +24,7 @@ class PointeuseController extends Controller
             'pointeuses' => Lecteur::whereNotNull('adresse_ip')->withCount([
                 'commandes as en_attente' => fn ($q) => $q->where('statut', CommandePointeuse::EN_ATTENTE),
                 'commandes as en_erreur' => fn ($q) => $q->where('statut', CommandePointeuse::ERREUR),
-            ])->orderByDesc('actif')->orderBy('nom')->get(),
+            ])->withMin(['commandes as attente_depuis' => fn ($q) => $q->where('statut', CommandePointeuse::EN_ATTENTE)], 'created_at')->orderByDesc('actif')->orderBy('nom')->get(),
             'modifiee' => Lecteur::find(request()->integer('modifier')),
         ]);
     }
@@ -77,7 +77,7 @@ class PointeuseController extends Controller
 
         $nombre = $synchro->toutSynchroniser($lecteur);
 
-        return back()->with('succes', "{$nombre} membre(s) mis en file pour « {$lecteur->nom} ». Ils partent dès que le programme d'écoute tourne.");
+        return back()->with('succes', "{$nombre} membre(s) mis en file pour « {$lecteur->nom} ». Envoi dans quelques secondes : la colonne « Envois » passe à « À jour » toute seule.");
     }
 
     public function destroy(Lecteur $lecteur): RedirectResponse
