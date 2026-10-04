@@ -19,7 +19,7 @@
 <form method="GET" class="card mb-6 flex flex-wrap items-end gap-3 p-4">
     @foreach($filtres['periode']->parametres() as $nom => $valeur)<input type="hidden" name="{{ $nom }}" value="{{ $valeur }}">@endforeach
     <div>
-        <label class="label text-xs" for="user_id">Caissière</label>
+        <label class="label text-xs" for="user_id">Encaissé par</label>
         <select id="user_id" name="user_id" class="input">
             <option value="">Toutes</option>
             @foreach($caissiers as $c)<option value="{{ $c->id }}" @selected($filtres['user_id'] === $c->id)>{{ $c->name }}</option>@endforeach
@@ -63,16 +63,25 @@
 <div class="card overflow-hidden">
     <div class="overflow-x-auto">
         <table class="table">
-            <thead><tr><th>Ticket</th><th>Date</th><th>Client</th><th>Objet</th><th>Mode</th><th>Caissière</th><th class="text-right">Montant</th><th></th></tr></thead>
+            <thead><tr><th>Ticket</th><th>Date</th><th>Encaissé par</th><th>Client</th><th>Objet</th><th>Mode</th><th class="text-right">Montant</th><th></th></tr></thead>
             <tbody>
             @forelse($paiements as $p)
                 <tr class="{{ $p->estAnnule() ? 'bg-red-50/40' : '' }}">
                     <td><a href="{{ route('recus.show', $p) }}" class="link whitespace-nowrap font-mono text-xs">{{ $p->numero_recu }}</a></td>
                     <td class="whitespace-nowrap text-slate-600">{{ $p->created_at->format('d/m/Y H:i') }}</td>
+                    <td class="whitespace-nowrap">
+                        @if($p->user)
+                            <span class="flex items-center gap-2">
+                                <span class="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-sky-600 text-xs font-bold text-white">{{ mb_strtoupper(mb_substr($p->user->name, 0, 1)) }}</span>
+                                <span class="leading-tight"><span class="block font-medium text-slate-900">{{ $p->user->name }}</span><span class="text-xs text-slate-500">{{ $p->user->isAdmin() ? 'Administrateur' : 'Caissier' }}</span></span>
+                            </span>
+                        @else
+                            <span class="text-slate-400">—</span>
+                        @endif
+                    </td>
                     <td>{{ $p->client?->nom_complet ?? 'Anonyme' }}</td>
                     <td>{{ $p->abonnement ? 'Abonnement '.$p->abonnement->formule->nom : 'Passage'.($p->quantite > 1 ? ' × '.$p->quantite : '') }}</td>
                     <td>{{ Paiement::MODES[$p->mode] ?? $p->mode }}@if($p->reference)<span class="block font-mono text-xs text-slate-400">{{ $p->reference }}</span>@endif</td>
-                    <td>{{ $p->user?->name ?? '—' }}</td>
                     <td class="whitespace-nowrap text-right font-semibold {{ $p->estAnnule() ? 'text-slate-400 line-through' : '' }}">{{ Fcfa::format($p->montant) }}</td>
                     <td class="text-right">
                         @if($p->estAnnule())
