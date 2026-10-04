@@ -117,7 +117,7 @@ class ClientController extends Controller
             'client' => $client,
             'finDroits' => $client->finDesDroits(),
             'passages' => $client->passages()->latest('passe_le')->limit(30)->get(),
-            'venues30j' => $client->passages()->where('statut', Passage::STATUT_AUTORISE)
+            'venues30j' => $client->passages()->venues()
                 ->where('passe_le', '>=', now()->subDays(30))->count(),
         ]);
     }
@@ -217,14 +217,14 @@ class ClientController extends Controller
             'email' => ['nullable', 'email', 'max:150'],
             'date_adhesion' => ['nullable', 'date', 'after:2000-01-01', 'before_or_equal:'.today()->addYear()->toDateString()],
             'sexe' => ['nullable', Rule::in(['M', 'F'])],
-            'empreinte_id' => ['nullable', 'string', Empreinte::REGLE, Rule::unique('clients', 'empreinte_id')->ignore($client?->id)],
+            'empreinte_id' => ['nullable', 'string', Empreinte::REGLE_CLIENT, Rule::unique('clients', 'empreinte_id')->ignore($client?->id)],
             'notes' => ['nullable', 'string', 'max:1000'],
             'photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'mimetypes:image/jpeg,image/png,image/webp', 'max:2048', 'dimensions:max_width=4000,max_height=4000'],
         ], [
             'empreinte_id.unique' => 'Ce n° de pointeuse est déjà attribué à un autre client.',
             'telephone.unique' => 'Ce numéro de téléphone est déjà enregistré.',
             'telephone.regex' => 'Le numéro de téléphone n\'est pas valide.',
-            'empreinte_id.regex' => 'Le n° de pointeuse est un nombre entier (ex. 12).',
+            'empreinte_id.regex' => 'Le n° de pointeuse est un nombre entier (ex. 12), inférieur à 900000000 (plage réservée au personnel).',
         ]);
 
         unset($data['photo']);

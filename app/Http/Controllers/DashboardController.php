@@ -20,7 +20,8 @@ class DashboardController extends Controller
             'periode' => $periode,
             'annees' => Exercices::disponibles(),
             'chiffres' => $kpi->chiffresPeriode($periode),
-            'avant' => $kpi->chiffresPeriode($periode->precedente()),
+            // Période en cours : comparée à la précédente au même moment (pas à la journée entière)
+            'avant' => $kpi->chiffresPeriode($periode->precedente(), $periode->instantComparable()),
             'clientsTotal' => Client::count(),
             'serie' => $kpi->serieRecettes($periode),
             'repartition' => $kpi->repartitionClients($reference),

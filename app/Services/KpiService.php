@@ -20,7 +20,8 @@ class KpiService
     {
         $jour = today()->toDateString();
 
-        $passages = Passage::whereDate('passe_le', $jour)->get(['statut', 'passe_le']);
+        $passages = Passage::whereDate('passe_le', $jour)->get(['statut', 'sens', 'passe_le'])
+            ->reject(fn ($p) => in_array($p->sens, [Passage::SENS_DEPART, Passage::SENS_DEJA], true));
         $paiements = Paiement::with('user:id,name')->valides()->whereDate('created_at', $jour)->get();
 
         $affluence = array_fill(0, 24, 0);
@@ -57,7 +58,7 @@ class KpiService
             ->whereHas('abonnements', fn ($q) => $q->enCours())
             ->whereHas('passages', fn ($q) => $q->where('statut', Passage::STATUT_AUTORISE)->where('passe_le', '>=', $depuis))
             ->withCount(['passages as passages_30j' => fn ($q) => $q
-                ->where('statut', Passage::STATUT_AUTORISE)
+                ->venues()
                 ->where('passe_le', '>=', now()->subDays(30))])
             ->withMax(['passages as dernier_passage_le' => fn ($q) => $q->where('statut', Passage::STATUT_AUTORISE)], 'passe_le')
             ->orderByDesc('passages_30j')
@@ -191,10 +192,11 @@ class KpiService
     }
 
     /** Chiffres d'un jour pour la caisse (un caissier, ou toute la salle). */
-    public function chiffresCaisse(CarbonInterface $jour, ?User $caissier = null): array
+    public function chiffresCaisse(CarbonInterface $jour, ?User $caissier = null, ?CarbonInterface $jusqua = null): array
     {
+        $bornes = [$jour->copy()->startOfDay(), $jusqua ?? $jour->copy()->endOfDay()];
         $paiements = Paiement::valides()
-            ->whereDate('created_at', $jour->toDateString())
+            ->whereBetween('created_at', $bornes)
             ->when($caissier, fn ($q) => $q->where('user_id', $caissier->id))
             ->with('abonnement:id,est_renouvellement')
             ->get();
@@ -207,21 +209,25 @@ class KpiService
             'passages_vendus' => (int) $paiements->where('type', Paiement::TYPE_JOURNALIER)->sum('quantite'),
             'abonnements' => $abonnements->filter(fn ($p) => ! $p->abonnement?->est_renouvellement)->count(),
             'renouvellements' => $abonnements->filter(fn ($p) => $p->abonnement?->est_renouvellement)->count(),
-            'entrees' => Passage::whereDate('passe_le', $jour->toDateString())->where('statut', Passage::STATUT_AUTORISE)->count(),
+            'entrees' => Passage::whereBetween('passe_le', $bornes)->venues()->count(),
         ];
     }
 
-    /** Chiffres clés d'une période (et non plus seulement du jour). */
-    public function chiffresPeriode(Periode $p): array
+    /**
+     * Chiffres clés d'une période. $jusqua coupe la période à un instant précis :
+     * on compare ainsi « aujourd'hui jusqu'à 17 h » à « hier jusqu'à 17 h », et non à toute la journée d'hier.
+     */
+    public function chiffresPeriode(Periode $p, ?CarbonInterface $jusqua = null): array
     {
-        $bornes = [$p->du->startOfDay(), $p->au->endOfDay()];
+        $fin = $p->au->endOfDay();
+        $bornes = [$p->du->startOfDay(), $jusqua ? $fin->min($jusqua) : $fin];
         $paiements = Paiement::valides()->whereBetween('created_at', $bornes)->get(['montant']);
 
         return [
             'clients_inscrits' => Client::whereBetween('created_at', $bornes)->count(),
             'recette' => (int) $paiements->sum('montant'),
             'tickets' => $paiements->count(),
-            'entrees' => Passage::whereBetween('passe_le', $bornes)->where('statut', Passage::STATUT_AUTORISE)->count(),
+            'entrees' => Passage::whereBetween('passe_le', $bornes)->venues()->count(),
             'abonnements_actifs' => Client::abonnes()
                 ->whereHas('abonnements', fn ($q) => $q->enCours($p->dateReference()))->count(),
         ];

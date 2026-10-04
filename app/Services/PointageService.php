@@ -68,6 +68,7 @@ class PointageService
             'user_id' => $poste?->id,
             'methode' => Passage::METHODE_EMPREINTE,
             'statut' => $autorise ? Passage::STATUT_AUTORISE : Passage::STATUT_REFUSE,
+            'sens' => $autorise ? $this->sens($client, $quand) : null,
             'motif' => $motif,
             'empreinte_id' => $empreinteId,
             'passe_le' => $quand,
@@ -105,17 +106,40 @@ class PointageService
         );
     }
 
-    /** Passage validé par la caissière après encaissement d'un journalier. */
+    /**
+     * Passage validé par la caissière après encaissement d'un journalier.
+     * Le ticket vaut arrivée, sauf pour un client qui a une empreinte : c'est alors
+     * son badge sur la pointeuse qui marque l'arrivée (puis le départ).
+     */
     public function parCaisse(Paiement $paiement, User $caissier, bool $avecClient = true): Passage
     {
+        $client = $avecClient ? $paiement->client : null;
+
         return $this->enregistrer([
-            'client_id' => $avecClient ? $paiement->client_id : null,
+            'client_id' => $client?->id,
             'user_id' => $caissier->id,
             'paiement_id' => $paiement->id,
             'methode' => Passage::METHODE_CAISSE,
             'statut' => Passage::STATUT_AUTORISE,
+            'sens' => $client?->empreinte_id ? null : Passage::SENS_ENTREE,
             'passe_le' => now(),
         ]);
+    }
+
+    /** 1er badge autorisé du jour = arrivée, 2e = départ, ensuite séance déjà enregistrée. */
+    private function sens(Client $client, CarbonInterface $quand): string
+    {
+        $dejaBadge = Passage::where('client_id', $client->id)
+            ->where('statut', Passage::STATUT_AUTORISE)
+            ->whereIn('sens', [Passage::SENS_ENTREE, Passage::SENS_DEPART])
+            ->whereBetween('passe_le', [$quand->copy()->startOfDay(), $quand->copy()->endOfDay()])
+            ->count();
+
+        return match ($dejaBadge) {
+            0 => Passage::SENS_ENTREE,
+            1 => Passage::SENS_DEPART,
+            default => Passage::SENS_DEJA,
+        };
     }
 
     /** @return array{0: bool, 1: ?string} */

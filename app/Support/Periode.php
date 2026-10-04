@@ -138,6 +138,27 @@ final class Periode
         };
     }
 
+    /** La période est en cours (elle contient l'instant présent). */
+    public function estEnCours(): bool
+    {
+        return CarbonImmutable::now()->between($this->du->startOfDay(), $this->au->endOfDay());
+    }
+
+    /**
+     * Instant de la période précédente qui correspond à « maintenant » dans la période en cours
+     * (même temps écoulé depuis le début). Null si la période n'est pas en cours.
+     */
+    public function instantComparable(): ?CarbonImmutable
+    {
+        if (! $this->estEnCours()) {
+            return null;
+        }
+
+        $ecoule = (int) $this->du->startOfDay()->diffInSeconds(CarbonImmutable::now());
+
+        return $this->precedente()->du->startOfDay()->addSeconds($ecoule);
+    }
+
     public function nombreDeJours(): int
     {
         return (int) $this->du->diffInDays($this->au) + 1;
@@ -163,13 +184,19 @@ final class Periode
 
     public function reference(): string
     {
-        return match ($this->granularite) {
+        $texte = match ($this->granularite) {
             'jour' => 'par rapport à la veille',
             'semaine' => 'par rapport aux jours précédents',
             'mois' => 'par rapport au mois précédent',
             'annee' => "par rapport à l'année précédente",
             default => 'par rapport à la période précédente',
         };
+
+        if ($this->estEnCours()) {
+            $texte .= $this->granularite === 'jour' ? ' à la même heure' : ' à la même date';
+        }
+
+        return $texte;
     }
 
     public function libelle(): string

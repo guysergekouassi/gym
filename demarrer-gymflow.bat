@@ -12,7 +12,7 @@ set "POINTEUSE=0"
 netstat -ano | findstr ":8005 " | findstr LISTENING >nul && set "SERVEUR=1"
 tasklist /v /fi "WINDOWTITLE eq GymFlow - Pointeuse*" | findstr /i "cmd.exe" >nul && set "POINTEUSE=1"
 
-if "%SERVEUR%%POINTEUSE%"=="11" (start "" "http://127.0.0.1:8005" & exit /b 0)
+if "%SERVEUR%%POINTEUSE%"=="11" (call "%~dp0outils\ouvrir-navigateur.bat" & exit /b 0)
 
 echo GymFlow demarre...
 if "%SERVEUR%"=="0" (
@@ -25,5 +25,6 @@ if "%SERVEUR%"=="0" start "GymFlow - Application (ne pas fermer)" /min cmd /c "%
 if "%POINTEUSE%"=="0" start "GymFlow - Pointeuse (ne pas fermer)" /min cmd /c "%~dp0outils\boucle-pointeuse.bat"
 
 timeout /t 4 /nobreak >nul
-start "" "http://127.0.0.1:8005"
+rem Fenetre GymFlow avec impression directe des tickets (voir outils\ouvrir-navigateur.bat)
+call "%~dp0outils\ouvrir-navigateur.bat"
 exit /b 0

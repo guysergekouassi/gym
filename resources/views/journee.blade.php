@@ -20,13 +20,13 @@
 
 <div class="mb-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
     <x-kpi label="Revenus encaissés aujourd'hui" :value="Fcfa::format($aujourdhui['recette'])" icon="cash" tone="green"
-           :variation="KpiService::variation($aujourdhui['recette'], $hier['recette'])"/>
+           :variation="KpiService::variation($aujourdhui['recette'], $hier['recette'])" reference="par rapport à hier à la même heure" :comparable="true"/>
     <x-kpi label="Visites / passages du jour" :value="$aujourdhui['entrees']" icon="user" tone="blue"
-           :variation="KpiService::variation($aujourdhui['entrees'], $hier['entrees'])"/>
+           :variation="KpiService::variation($aujourdhui['entrees'], $hier['entrees'])" reference="par rapport à hier à la même heure" :comparable="true"/>
     <x-kpi label="Abonnements vendus" :value="$aujourdhui['abonnements']" icon="calendar" tone="purple"
-           :variation="KpiService::variation($aujourdhui['abonnements'], $hier['abonnements'])"/>
+           :variation="KpiService::variation($aujourdhui['abonnements'], $hier['abonnements'])" reference="par rapport à hier à la même heure" :comparable="true"/>
     <x-kpi label="Renouvellements du jour" :value="$aujourdhui['renouvellements']" icon="refresh" tone="orange"
-           :variation="KpiService::variation($aujourdhui['renouvellements'], $hier['renouvellements'])"/>
+           :variation="KpiService::variation($aujourdhui['renouvellements'], $hier['renouvellements'])" reference="par rapport à hier à la même heure" :comparable="true"/>
 </div>
 
 <div class="mb-6 grid gap-6 xl:grid-cols-5">

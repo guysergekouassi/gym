@@ -9,6 +9,7 @@ use App\Models\Paiement;
 use App\Models\Passage;
 use App\Services\Hikvision\HikvisionClient;
 use App\Services\Hikvision\PointeuseInjoignable;
+use App\Support\Empreinte;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
 
@@ -92,6 +93,9 @@ class PointeuseService
         $traites = 0;
 
         foreach ($evenements as $e) {
+            if (Empreinte::estPersonnel($e['employe'])) {
+                continue; // employé (n° 900000000 et plus) : il ouvre le menu, ce n'est pas un passage
+            }
             if (in_array($e['minor'], self::SUCCES, true) && $e['employe']) {
                 $this->pointage->parEmpreinte($e['employe'], $lecteur, null, $e['quand']);
             } elseif ($e['employe']) {

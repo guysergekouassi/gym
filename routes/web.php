@@ -12,6 +12,7 @@ use App\Http\Controllers\CaisseController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JourneeController;
+use App\Http\Controllers\PresenceController;
 use App\Http\Controllers\RecuController;
 use Illuminate\Support\Facades\Route;
 
@@ -78,6 +79,8 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
         Route::get('/recus/{paiement}', [RecuController::class, 'show'])->name('recus.show');
 
         Route::resource('clients', ClientController::class)->except('destroy');
+
+        Route::get('/entrees-departs', [PresenceController::class, 'index'])->name('presences.index');
 
         Route::get('/accueil', [AccueilController::class, 'index'])->name('accueil.index');
         Route::get('/accueil/dernier', [AccueilController::class, 'dernier'])->name('accueil.dernier');

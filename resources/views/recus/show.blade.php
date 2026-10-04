@@ -1,6 +1,9 @@
 @php
     use App\Models\Paiement;
     use App\Support\Fcfa;
+    use App\Support\Horaires;
+    $seance = Horaires::duJour($paiement->created_at);
+    $semaine = $paiement->abonnement ? Horaires::resume() : [];
     $largeur = config('salle.impression.largeur_mm');
     $autoImpression = request()->boolean('imprimer') && config('salle.impression.driver') === 'navigateur' && ! $paiement->estAnnule();
 @endphp
@@ -47,6 +50,8 @@
     <div class="centre">{{ config('salle.adresse') }}</div>
     @if(config('salle.telephone'))<div class="centre">Tél : {{ config('salle.telephone') }}</div>@endif
     @if(config('salle.email'))<div class="centre">{{ config('salle.email') }}</div>@endif
+    <div class="centre gras" style="margin-top:4px">Arrivée : {{ $paiement->created_at->format('H:i:s') }}</div>
+    @if($seance)<div class="centre">Séance du jour : {{ $seance }}</div>@endif
     <div class="sep"></div>
 
     @if($paiement->estAnnule())
@@ -70,6 +75,11 @@
     <div class="sep"></div>
     <div class="montant">{{ Fcfa::format($paiement->montant) }}</div>
     <div class="centre">Caisse : {{ $paiement->user?->name ?? '—' }}</div>
+    @if($semaine)
+        <div class="sep"></div>
+        <div class="centre gras">Horaires des séances</div>
+        @foreach($semaine as $ligne)<div class="centre">{{ $ligne }}</div>@endforeach
+    @endif
     <div class="sep"></div>
     <div class="centre">{{ config('salle.message_recu') ?: 'Merci et bonne séance !' }}</div>
     <div class="centre" style="font-size:.85em;margin-top:4px">Ticket à conserver</div>
