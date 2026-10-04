@@ -11,14 +11,14 @@
 <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
     <div>
         <h1 class="text-3xl font-bold tracking-tight text-slate-900">Entrées / départs</h1>
-        <p class="mt-1 text-slate-500">1<sup>er</sup> badge du jour = arrivée, 2<sup>e</sup> badge = départ. Heures à la seconde près.</p>
+        <p class="mt-1 text-slate-500">1<sup>er</sup> badge du jour = arrivée ; départ = badge fait à partir de l'heure de fin des séances{{ $finDuJour ? ' ('.$finDuJour.' aujourd\'hui)' : '' }}. Heures à la seconde près.</p>
     </div>
     <x-filtre-periode :periode="$periode" :annees="$annees" :conserver="['q' => request('q')]"/>
 </div>
 
 <div class="mb-6 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 2xl:gap-5">
     <x-kpi :label="'Entrées '.$periode->suffixe()" :value="$chiffres['entrees']" icon="arrow-right" tone="green" hint="arrivées (badge ou ticket)"/>
-    <x-kpi :label="'Départs '.$periode->suffixe()" :value="$chiffres['departs']" icon="logout" tone="blue" hint="2e badge du jour"/>
+    <x-kpi :label="'Départs '.$periode->suffixe()" :value="$chiffres['departs']" icon="logout" tone="blue" hint="badge à partir de l'heure de fin"/>
     <x-kpi label="Présents en ce moment" :value="$chiffres['presents']" icon="users" tone="orange" :hint="$salleFermee ? 'salle fermée' : 'arrivés aujourd\'hui, pas encore repartis'"/>
     <x-kpi label="Durée moyenne" :value="PresenceController::duree($chiffres['duree_moyenne'])" icon="clock" tone="purple" hint="entre l'arrivée et le départ"/>
     <x-kpi :label="'Accès refusés '.$periode->suffixe()" :value="$chiffres['refus']" icon="x" tone="red" hint="abonnement expiré, doigt inconnu…"/>

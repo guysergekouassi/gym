@@ -250,8 +250,8 @@ Ensuite : appui long sur **OK/MENU**, puis posez ce doigt : le menu s'ouvre. Si 
 | Situation | Écran de la pointeuse | Écran d'accueil GymFlow |
 |---|---|---|
 | Abonnement en cours, 1ᵉʳ badge du jour | « Authenticated » + nom | **Vert** « Bienvenue ! », jours restants |
-| 2ᵉ badge du jour (sortie) | « Authenticated » + nom | **Bleu** « À bientôt ! » |
-| 3ᵉ badge et suivants | « Authenticated » + nom | **Orange** « Déjà enregistré » |
+| Badge de sortie, à partir de l'heure de fin des séances (Paramètres) | « Authenticated » + nom | **Bleu** « À bientôt ! » |
+| Autre badge (avant l'heure de fin, ou après le départ) | « Authenticated » + nom | **Orange** « Déjà enregistré » |
 | Abonnement terminé | Refus | **Rouge** « Abonnement expiré » |
 | Journalier qui a payé aujourd'hui | Réussie | **Vert** |
 | Doigt non enregistré | Refus | **Rouge** « Empreinte non reconnue » |
