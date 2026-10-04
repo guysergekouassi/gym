@@ -42,7 +42,7 @@ function afficher(p) {
     const etats = {
         entree: ['ok', 'Bienvenue !', ''],
         depart: ['depart', 'À bientôt !', p.heure ? `Départ enregistré à ${p.heure}` : ''],
-        deja: ['deja', 'Déjà enregistré', 'Votre arrivée et votre départ du jour sont déjà enregistrés'],
+        deja: ['deja', 'Déjà enregistré', p.detail || 'Votre arrivée et votre départ du jour sont déjà enregistrés'],
     };
     const [etat, titre, detail] = p.autorise ? (etats[p.sens] ?? etats.entree) : ['ko', 'Accès refusé', p.message];
     fiche.dataset.etat = etat;
