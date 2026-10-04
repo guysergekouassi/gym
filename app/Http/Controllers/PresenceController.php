@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Passage;
 use App\Support\Exercices;
+use App\Support\Horaires;
 use App\Support\Periode;
 use App\Support\Recherche;
 use Carbon\CarbonImmutable;
@@ -39,15 +40,18 @@ class PresenceController extends Controller
             ->map(fn (Passage $p) => $p->passe_le->diffInSeconds($p->depart_le));
 
         $aujourdhui = [CarbonImmutable::today(), CarbonImmutable::today()->endOfDay()];
+        // Après l'heure de fin des séances, plus personne n'est « présent » : départ non badgé
+        $salleFermee = Horaires::estFermeA(CarbonImmutable::now());
 
         return view('presences.index', [
             'periode' => $periode,
             'annees' => Exercices::disponibles(),
             'lignes' => $lignes,
+            'salleFermee' => $salleFermee,
             'chiffres' => [
                 'entrees' => Passage::where('sens', Passage::SENS_ENTREE)->whereBetween('passe_le', $bornes)->count(),
                 'departs' => Passage::where('sens', Passage::SENS_DEPART)->whereBetween('passe_le', $bornes)->count(),
-                'presents' => $this->arrivees()->whereNotNull('passages.client_id')
+                'presents' => $salleFermee ? 0 : $this->arrivees()->whereNotNull('passages.client_id')
                     ->where('passages.methode', Passage::METHODE_EMPREINTE)
                     ->whereBetween('passages.passe_le', $aujourdhui)->get(['passages.id', 'passages.passe_le'])
                     ->whereNull('depart_le')->count(),

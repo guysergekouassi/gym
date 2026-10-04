@@ -57,6 +57,18 @@ final class Horaires
         Parametre::definir(self::CLE, $horaires === [] ? '' : json_encode($horaires));
     }
 
+    /** La salle est-elle fermée à cet instant (après l'heure de fin, ou jour fermé) ? Inconnu (non défini) = non. */
+    public static function estFermeA(CarbonInterface $instant): bool
+    {
+        $jour = self::tous()[$instant->dayOfWeekIso] ?? null;
+
+        return match ($jour['etat'] ?? null) {
+            self::FERME => true,
+            self::OUVERT => $instant->format('H:i') >= $jour['fin'],
+            default => false,
+        };
+    }
+
     /** « 06:00 – 22:00 », « Fermé », ou null si le jour n'est pas renseigné. */
     public static function duJour(CarbonInterface $date): ?string
     {
