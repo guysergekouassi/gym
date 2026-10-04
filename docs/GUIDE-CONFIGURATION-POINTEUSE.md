@@ -1,4 +1,4 @@
-# Guide pas à pas : relier la pointeuse Hikvision à l'application
+# Guide pas à pas : relier la pointeuse Hikvision à GymFlow
 
 Pointeuse **Hikvision DS-K1T808MFWX** · PC Windows 10 ou 11 · aucune connaissance réseau nécessaire.
 
@@ -15,7 +15,7 @@ Pointeuse **Hikvision DS-K1T808MFWX** · PC Windows 10 ou 11 · aucune connaissa
 | La pointeuse | — | Reconnaît le doigt du membre |
 | Son chargeur | Dans la boîte ; l'étiquette doit indiquer **12 V ⎓ 1 A** (ou plus d'ampères) | Alimente la pointeuse |
 | Le **câble jaune** (câble réseau RJ45) | Vous l'avez déjà | Relie la pointeuse au PC (montage par câble) |
-| Le PC de caisse (votre PC portable convient) | — | Fait tourner l'application |
+| Le PC de caisse (votre PC portable convient) | — | Fait tourner GymFlow |
 | Un papier et un stylo | — | Pour noter le mot de passe et les adresses (fiche page suivante) |
 
 ### Trois mots de vocabulaire
@@ -26,7 +26,7 @@ Pointeuse **Hikvision DS-K1T808MFWX** · PC Windows 10 ou 11 · aucune connaissa
 
 ### Ce que vous n'avez PAS besoin d'avoir
 
-- **Internet** : ni l'application ni la pointeuse n'en ont besoin.
+- **Internet** : ni GymFlow ni la pointeuse n'en ont besoin.
 - **Une box** : avec le câble jaune direct, la box est inutile.
 
 ### Fiche à remplir (gardez-la en lieu sûr, pas à la vue des clients)
@@ -35,7 +35,7 @@ Pointeuse **Hikvision DS-K1T808MFWX** · PC Windows 10 ou 11 · aucune connaissa
 Mot de passe admin de la pointeuse : ............................
 Adresse IP de la pointeuse         : 192.168.50.64  (ou ............ en Wi-Fi)
 Adresse IP du PC (prise réseau)    : 192.168.50.10
-Compte admin de l'application     : ............................
+Compte admin GymFlow               : ............................
 ```
 
 ---
@@ -48,13 +48,13 @@ Compte admin de l'application     : ............................
    - 8 à 16 caractères, avec des lettres **et** des chiffres (exemple : `Gym2026Entree`).
    - Le clavier de la pointeuse écrit des lettres comme un ancien téléphone : appuyez plusieurs fois sur `2` pour A, B, C… La touche **≡** sert en général à passer des chiffres aux lettres. **←** efface.
    - Saisissez-le deux fois puis validez avec **OK**.
-3. **Notez ce mot de passe sur la fiche.** Il protège le menu de la pointeuse et l'application en a besoin.
+3. **Notez ce mot de passe sur la fiche.** Il protège le menu de la pointeuse et GymFlow en a besoin.
 
 > Mot de passe perdu ? Il faut réinitialiser la pointeuse (voir le manuel Hikvision ou le revendeur) : tous les réglages et les empreintes seront effacés.
 
 **Les touches de la pointeuse :** **OK/MENU** (en haut à droite) ouvre le menu et valide ; **ESC** revient en arrière ; les **flèches** déplacent la sélection ; **←** efface. Les membres, eux, n'utilisent jamais les touches : ils posent seulement leur doigt.
 
-**Le port USB** de la pointeuse sert à brancher une clé USB : export ou import des utilisateurs et des pointages, mise à jour du logiciel de la pointeuse. **l'application ne s'en sert pas**, inutile d'y toucher.
+**Le port USB** de la pointeuse sert à brancher une clé USB : export ou import des utilisateurs et des pointages, mise à jour du logiciel de la pointeuse. **GymFlow ne s'en sert pas**, inutile d'y toucher.
 
 ---
 
@@ -171,15 +171,15 @@ Si le ping échoue alors que tout est bien réglé, ce Wi-Fi isole les appareils
 1. Câble jaune : pointeuse (port **LAN**) → un **port jaune** de la box. Le PC est connecté à cette box (Wi-Fi ou câble).
 2. Sur le PC, `ipconfig` donne le début des adresses de la box (souvent `192.168.1.`) et la passerelle (souvent `192.168.1.1`).
 3. Sur la pointeuse, Réseau filaire : DHCP **désactivé**, IP `192.168.1.200` (vérifiée libre avec ping), masque `255.255.255.0`, passerelle = celle de la box.
-4. Dans l'application, mettez cette adresse (étape 4).
+4. Dans GymFlow, mettez cette adresse (étape 4).
 
 La box n'a pas besoin d'internet : elle sert seulement à relier les appareils.
 
 ---
 
-## 4. Relier la pointeuse dans l'application
+## 4. Relier la pointeuse dans GymFlow
 
-1. Double-cliquez sur **`demarrer.bat`** (dossier de l'application, à côté du fichier `artisan`). L'application s'ouvre dans le navigateur.
+1. Double-cliquez sur **`demarrer-gymflow.bat`** (dossier de GymFlow, à côté du fichier `artisan`). GymFlow s'ouvre dans le navigateur.
 2. Connectez-vous avec le compte **administrateur**.
 3. Barre latérale → **Administration** → **Pointeuses**.
 4. Formulaire de droite :
@@ -205,11 +205,11 @@ En cas d'échec, lisez le message :
 
 ### Quand ?
 
-**Après avoir créé la fiche dans l'application**, au comptoir, avec le client présent.
+**Après avoir créé la fiche dans GymFlow**, au comptoir, avec le client présent.
 
-1. Application → **Clients** → **Nouveau client** → remplissez → bouton **« N° … »** pour attribuer un numéro libre (ex. 13) → **Enregistrer**.
-2. Quelques secondes plus tard, le **n° 13 apparaît sur la pointeuse avec le nom** (envoyé par l'application).
-3. Sur la pointeuse : restez appuyé sur **OK/MENU** → identifiez-vous (doigt d'un administrateur ou mot de passe) → **User** → **Person List** → choisissez le **n° 13** → **Fingerprint** → **+**. N'utilisez jamais **Add Person** pour un client : c'est l'application qui crée les membres.
+1. GymFlow → **Clients** → **Nouveau client** → remplissez → bouton **« N° … »** pour attribuer un numéro libre (ex. 13) → **Enregistrer**.
+2. Quelques secondes plus tard, le **n° 13 apparaît sur la pointeuse avec le nom** (envoyé par GymFlow).
+3. Sur la pointeuse : restez appuyé sur **OK/MENU** → identifiez-vous (doigt d'un administrateur ou mot de passe) → **User** → **Person List** → choisissez le **n° 13** → **Fingerprint** → **+**. N'utilisez jamais **Add Person** pour un client : c'est GymFlow qui crée les membres.
 4. Le client pose son doigt **3 fois** de suite, comme demandé à l'écran (retirer puis reposer à chaque fois).
 5. Recommencez avec un **2ᵉ doigt de secours**, puis validez.
 
@@ -222,14 +222,14 @@ Conseils : doigt **propre et sec**, posé **à plat** au centre du capteur (la p
 
 ### Peut-on créer plusieurs clients d'abord, puis enregistrer les doigts plus tard ?
 
-**Oui.** Créez autant de fiches que vous voulez dans l'application : chaque client reçoit son numéro, envoyé à la pointeuse. Chaque personne vient ensuite, quand elle veut, enregistrer son doigt sur **son** numéro. En attendant, la caissière peut faire entrer le membre en tapant son numéro sur l'**Écran d'accueil** (secours).
+**Oui.** Créez autant de fiches que vous voulez dans GymFlow : chaque client reçoit son numéro, envoyé à la pointeuse. Chaque personne vient ensuite, quand elle veut, enregistrer son doigt sur **son** numéro. En attendant, la caissière peut faire entrer le membre en tapant son numéro sur l'**Écran d'accueil** (secours).
 
 ### Le personnel (ouvrir le menu avec son doigt)
 
 Pour que l'admin ou la caissière ouvre le menu de la pointeuse avec son doigt, sans connaître le mot de passe :
 
 1. **OK/MENU** (appui long) → mot de passe → **User** → **Add Person** (c'est le seul cas où on l'utilise).
-2. **Employee ID** : **900000001** pour la 1ʳᵉ personne, 900000002 pour la 2ᵉ… Ces numéros sont réservés au personnel : l'application les ignore (ce ne sont pas des passages) et ne les donne jamais à un client.
+2. **Employee ID** : **900000001** pour la 1ʳᵉ personne, 900000002 pour la 2ᵉ… Ces numéros sont réservés au personnel : GymFlow les ignore (ce ne sont pas des passages) et ne les donne jamais à un client.
 3. **Name** : le prénom de la personne.
 4. **Department** : laissez **Company**. Ce n'est qu'un service (étiquette), cela ne donne **aucun droit**.
 5. **User Role** (ou *Authority* / *Permission*, selon la version) : **Administrator**. C'est ce réglage qui ouvre le menu.
@@ -241,13 +241,13 @@ Ensuite : appui long sur **OK/MENU**, puis posez ce doigt : le menu s'ouvre. Si 
 
 ## 6. Au quotidien
 
-- **Le matin** : allumer le PC. Si le démarrage automatique est activé (voir DEPLOIEMENT.md), l'application se lance toute seule. Sinon, double-clic sur `demarrer.bat`.
-- **Pendant la journée** : ne fermez pas les deux fenêtres réduites « Salle - Application » et « Salle - Pointeuse ». Si l'une s'arrête, elle redémarre seule en 5 secondes.
+- **Le matin** : allumer le PC. Si le démarrage automatique est activé (voir DEPLOIEMENT.md), GymFlow se lance tout seul. Sinon, double-clic sur `demarrer-gymflow.bat`.
+- **Pendant la journée** : ne fermez pas les deux fenêtres réduites « GymFlow - Application » et « GymFlow - Pointeuse ». Si l'une s'arrête, elle redémarre seule en 5 secondes.
 - **PC portable** : branché sur secteur, et mise en veille désactivée (Windows + I → **Système** → **Alimentation** → *Mettre en veille* : **Jamais** quand il est branché).
 
 ### Ce que fait la pointeuse
 
-| Situation | Écran de la pointeuse | Écran d'accueil de l'application |
+| Situation | Écran de la pointeuse | Écran d'accueil GymFlow |
 |---|---|---|
 | Abonnement en cours, 1ᵉʳ badge du jour | « Authenticated » + nom | **Vert** « Bienvenue ! », jours restants |
 | 2ᵉ badge du jour (sortie) | « Authenticated » + nom | **Bleu** « À bientôt ! » |
@@ -256,7 +256,7 @@ Ensuite : appui long sur **OK/MENU**, puis posez ce doigt : le menu s'ouvre. Si 
 | Journalier qui a payé aujourd'hui | Réussie | **Vert** |
 | Doigt non enregistré | Refus | **Rouge** « Empreinte non reconnue » |
 
-L'écran de la pointeuse affiche son **propre logiciel Hikvision**, pas l'application : il montre toujours le nom et « Authenticated », sans message personnalisé (la pointeuse décide seule, avant que l'application ne reçoive le passage). L'application s'affiche sur le PC : menu **Écran d'accueil**, à mettre en plein écran sur un 2ᵉ écran tourné vers les clients si vous en avez un.
+L'écran de la pointeuse affiche son **propre logiciel Hikvision**, pas GymFlow : il montre toujours le nom et « Authenticated », sans message personnalisé (la pointeuse décide seule, avant que GymFlow ne reçoive le passage). GymFlow s'affiche sur le PC : menu **Écran d'accueil**, à mettre en plein écran sur un 2ᵉ écran tourné vers les clients si vous en avez un.
 
 ---
 
@@ -264,10 +264,10 @@ L'écran de la pointeuse affiche son **propre logiciel Hikvision**, pas l'applic
 
 | Problème | Vérifier |
 |---|---|
-| Pointeuses : « Erreur », « injoignable » | Câble branché ? Pointeuse allumée ? `ping` OK ? Fenêtre « Salle - Pointeuse » ouverte ? |
-| Le nom n'apparaît pas sur la pointeuse | Pointeuses → colonne **Envois** : « en attente » ? Alors la fenêtre « Salle - Pointeuse » est fermée : relancer `demarrer.bat` |
+| Pointeuses : « Erreur », « injoignable » | Câble branché ? Pointeuse allumée ? `ping` OK ? Fenêtre « GymFlow - Pointeuse » ouverte ? |
+| Le nom n'apparaît pas sur la pointeuse | Pointeuses → colonne **Envois** : « en attente » ? Alors la fenêtre « GymFlow - Pointeuse » est fermée : relancer `demarrer-gymflow.bat` |
 | Plus rien n'arrive en fin de journée | Le PC s'est mis en veille |
-| En Wi-Fi, ça marchait hier mais plus aujourd'hui | L'adresse de la pointeuse a changé : la relire dans son menu Wi-Fi et la corriger dans l'application (**Modifier**) |
+| En Wi-Fi, ça marchait hier mais plus aujourd'hui | L'adresse de la pointeuse a changé : la relire dans son menu Wi-Fi et la corriger dans GymFlow (**Modifier**) |
 | « Empreinte non reconnue » pour un membre inscrit | Le doigt n'a pas été enregistré sur **son** numéro : refaire l'étape 5 |
 
 ---
@@ -275,7 +275,7 @@ L'écran de la pointeuse affiche son **propre logiciel Hikvision**, pas l'applic
 ## 8. Sécurité
 
 - Le **mot de passe admin** de la pointeuse ne doit jamais être donné aux membres : il ouvre le menu.
-- Dans l'application, ce mot de passe est **chiffré** et n'est jamais réaffiché.
-- L'application ne contacte que des adresses du **réseau local** (192.168.x.x, 10.x.x.x, 172.16-31.x.x), c'est-à-dire celles de la salle : c'est le cas dans tous les montages ci-dessus.
-- Les **empreintes restent dans la pointeuse**. L'application ne reçoit que le numéro du membre et l'heure de passage.
+- Dans GymFlow, ce mot de passe est **chiffré** et n'est jamais réaffiché.
+- GymFlow ne contacte que des adresses du **réseau local** (192.168.x.x, 10.x.x.x, 172.16-31.x.x), c'est-à-dire celles de la salle : c'est le cas dans tous les montages ci-dessus.
+- Les **empreintes restent dans la pointeuse**. GymFlow ne reçoit que le numéro du membre et l'heure de passage.
 - Obligations légales : **autorisation préalable de l'ARTCI** pour la collecte d'empreintes (loi n° 2013-450) et **consentement écrit** de chaque membre.
