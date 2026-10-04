@@ -38,12 +38,19 @@ function bip(ok) {
 
 function afficher(p) {
     const fiche = el('fiche');
-    fiche.dataset.etat = p.autorise ? 'ok' : 'ko';
+    // 1er badge du jour = arrivée, 2e = départ, ensuite séance déjà enregistrée
+    const etats = {
+        entree: ['ok', 'Bienvenue !', ''],
+        depart: ['depart', 'À bientôt !', p.heure ? `Départ enregistré à ${p.heure}` : ''],
+        deja: ['deja', 'Déjà enregistré', 'Votre arrivée et votre départ du jour sont déjà enregistrés'],
+    };
+    const [etat, titre, detail] = p.autorise ? (etats[p.sens] ?? etats.entree) : ['ko', 'Accès refusé', p.message];
+    fiche.dataset.etat = etat;
     fiche.classList.remove('hidden');
     el('attente').classList.add('hidden');
 
-    el('message').textContent = p.autorise ? 'Bienvenue !' : 'Accès refusé';
-    el('motif').textContent = p.autorise ? '' : p.message;
+    el('message').textContent = titre;
+    el('motif').textContent = detail;
     el('nom').textContent = p.client ? p.client.nom : 'Empreinte inconnue';
     el('type').textContent = p.client ? p.client.type : '';
 

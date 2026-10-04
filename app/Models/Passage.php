@@ -13,6 +13,11 @@ class Passage extends Model
     public const STATUT_AUTORISE = 'autorise';
     public const STATUT_REFUSE = 'refuse';
 
+    /** 1er badge du jour = arrivée, 2e = départ, les suivants = séance déjà enregistrée. */
+    public const SENS_ENTREE = 'entree';
+    public const SENS_DEPART = 'depart';
+    public const SENS_DEJA = 'deja';
+
     public const MOTIFS = [
         'empreinte_inconnue' => 'Empreinte non reconnue',
         'abonnement_expire' => 'Abonnement expiré ou inexistant',
@@ -22,7 +27,7 @@ class Passage extends Model
 
     protected $fillable = [
         'client_id', 'lecteur_id', 'user_id', 'paiement_id',
-        'methode', 'statut', 'motif', 'empreinte_id', 'passe_le',
+        'methode', 'statut', 'sens', 'motif', 'empreinte_id', 'passe_le',
     ];
 
     protected function casts(): array
@@ -58,7 +63,11 @@ class Passage extends Model
     public function message(): string
     {
         if ($this->estAutorise()) {
-            return 'Bienvenue';
+            return match ($this->sens) {
+                self::SENS_DEPART => 'À bientôt',
+                self::SENS_DEJA => 'Déjà enregistré',
+                default => 'Bienvenue',
+            };
         }
 
         return self::MOTIFS[$this->motif] ?? 'Accès refusé';

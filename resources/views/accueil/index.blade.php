@@ -41,6 +41,8 @@
         <div id="fiche" data-etat="ok" role="status" aria-live="assertive"
              class="hidden w-full max-w-4xl rounded-[2.5rem] p-12 text-center shadow-2xl
                     data-[etat=ok]:bg-gradient-to-br data-[etat=ok]:from-brand-500 data-[etat=ok]:to-brand-700
+                    data-[etat=depart]:bg-gradient-to-br data-[etat=depart]:from-sky-500 data-[etat=depart]:to-sky-700
+                    data-[etat=deja]:bg-gradient-to-br data-[etat=deja]:from-amber-500 data-[etat=deja]:to-amber-700
                     data-[etat=ko]:bg-gradient-to-br data-[etat=ko]:from-red-500 data-[etat=ko]:to-red-700">
             <div class="mx-auto mb-8 flex size-44 items-center justify-center overflow-hidden rounded-full bg-white/15 ring-8 ring-white/25">
                 <img id="photo" alt="" class="hidden size-full object-cover">
