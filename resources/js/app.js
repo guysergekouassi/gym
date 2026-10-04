@@ -399,3 +399,15 @@ document.addEventListener('click', (e) => {
         if (!d.contains(e.target)) d.removeAttribute('open');
     });
 });
+
+// Paramètres → horaires des séances : heures visibles seulement si « Ouvert », ✕ remet « Non défini »
+$$('[data-horaire]').forEach((ligne) => {
+    const etat = ligne.querySelector('[data-horaire-etat]');
+    const majHoraire = () => {
+        ligne.querySelector('[data-horaire-heures]').classList.toggle('hidden', etat.value !== 'ouvert');
+        ligne.querySelector('[data-horaire-ferme]').classList.toggle('hidden', etat.value !== 'ferme');
+        ligne.querySelector('[data-horaire-effacer]').classList.toggle('invisible', etat.value === '');
+    };
+    etat.addEventListener('change', majHoraire);
+    ligne.querySelector('[data-horaire-effacer]').addEventListener('click', () => { etat.value = ''; majHoraire(); });
+});

@@ -20,7 +20,8 @@ class KpiService
     {
         $jour = today()->toDateString();
 
-        $passages = Passage::whereDate('passe_le', $jour)->get(['statut', 'passe_le']);
+        $passages = Passage::whereDate('passe_le', $jour)->get(['statut', 'sens', 'passe_le'])
+            ->reject(fn ($p) => in_array($p->sens, [Passage::SENS_DEPART, Passage::SENS_DEJA], true));
         $paiements = Paiement::with('user:id,name')->valides()->whereDate('created_at', $jour)->get();
 
         $affluence = array_fill(0, 24, 0);
@@ -57,7 +58,7 @@ class KpiService
             ->whereHas('abonnements', fn ($q) => $q->enCours())
             ->whereHas('passages', fn ($q) => $q->where('statut', Passage::STATUT_AUTORISE)->where('passe_le', '>=', $depuis))
             ->withCount(['passages as passages_30j' => fn ($q) => $q
-                ->where('statut', Passage::STATUT_AUTORISE)
+                ->venues()
                 ->where('passe_le', '>=', now()->subDays(30))])
             ->withMax(['passages as dernier_passage_le' => fn ($q) => $q->where('statut', Passage::STATUT_AUTORISE)], 'passe_le')
             ->orderByDesc('passages_30j')
@@ -208,7 +209,7 @@ class KpiService
             'passages_vendus' => (int) $paiements->where('type', Paiement::TYPE_JOURNALIER)->sum('quantite'),
             'abonnements' => $abonnements->filter(fn ($p) => ! $p->abonnement?->est_renouvellement)->count(),
             'renouvellements' => $abonnements->filter(fn ($p) => $p->abonnement?->est_renouvellement)->count(),
-            'entrees' => Passage::whereBetween('passe_le', $bornes)->where('statut', Passage::STATUT_AUTORISE)->count(),
+            'entrees' => Passage::whereBetween('passe_le', $bornes)->venues()->count(),
         ];
     }
 
@@ -226,7 +227,7 @@ class KpiService
             'clients_inscrits' => Client::whereBetween('created_at', $bornes)->count(),
             'recette' => (int) $paiements->sum('montant'),
             'tickets' => $paiements->count(),
-            'entrees' => Passage::whereBetween('passe_le', $bornes)->where('statut', Passage::STATUT_AUTORISE)->count(),
+            'entrees' => Passage::whereBetween('passe_le', $bornes)->venues()->count(),
             'abonnements_actifs' => Client::abonnes()
                 ->whereHas('abonnements', fn ($q) => $q->enCours($p->dateReference()))->count(),
         ];
