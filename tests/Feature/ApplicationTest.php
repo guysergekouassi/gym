@@ -13,7 +13,7 @@ use App\Services\KpiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class GymFlowTest extends TestCase
+class ApplicationTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -47,17 +47,17 @@ class GymFlowTest extends TestCase
         $this->get('/')->assertRedirect('/login');
         $this->get('/login')->assertOk();
 
-        $this->post('/login', ['email' => 'admin@gymflow.local', 'password' => 'ChangeMoi!2026']);
+        $this->post('/login', ['email' => 'admin@salle.local', 'password' => 'ChangeMoi!2026']);
         $this->assertAuthenticatedAs($this->admin);
         $this->get('/')->assertRedirect(route('dashboard'));
         $this->post('/logout');
 
-        $this->post('/login', ['email' => 'caisse@gymflow.local', 'password' => 'ChangeMoi!2026'])
+        $this->post('/login', ['email' => 'caisse@salle.local', 'password' => 'ChangeMoi!2026'])
             ->assertRedirect(route('journee'));
         $this->get('/')->assertRedirect(route('journee'));
 
         $this->post('/logout');
-        $this->post('/login', ['email' => 'admin@gymflow.local', 'password' => 'mauvais'])->assertSessionHasErrors('email');
+        $this->post('/login', ['email' => 'admin@salle.local', 'password' => 'mauvais'])->assertSessionHasErrors('email');
         $this->assertGuest();
     }
 

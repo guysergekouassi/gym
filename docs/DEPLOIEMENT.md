@@ -1,14 +1,14 @@
-# Déployer GymFlow chez un client
+# Déployer l'application chez un client
 
 ## Où se trouvent les fichiers de lancement ?
 
-Dans le **dossier principal de GymFlow**, à côté du fichier `artisan` (par exemple `C:\GymFlow\` ou `C:\laragon\www\gym\`) :
+Dans le **dossier principal de l'application**, à côté du fichier `artisan` (par exemple `C:\GestionSalle\` ou `C:\laragon\www\gym\`) :
 
 | Fichier | Quand l'utiliser |
 |---|---|
-| `installer-gymflow.bat` | **Une seule fois**, à l'installation chez le client |
-| `activer-demarrage-auto.bat` | **Une seule fois** : GymFlow démarrera tout seul à chaque allumage du PC |
-| `demarrer-gymflow.bat` | Pour lancer GymFlow à la main (inutile si le démarrage auto est activé) |
+| `installer.bat` | **Une seule fois**, à l'installation chez le client |
+| `activer-demarrage-auto.bat` | **Une seule fois** : L'application démarrera tout seul à chaque allumage du PC |
+| `demarrer.bat` | Pour lancer l'application à la main (inutile si le démarrage auto est activé) |
 | `desactiver-demarrage-auto.bat` | Pour arrêter le démarrage automatique |
 
 ---
@@ -26,7 +26,7 @@ C'est la bonne approche pour une salle : tout tourne sur le PC de caisse, ça ma
 3. Rendez PHP accessible partout : Laragon → **Menu** → **Tools** → **Path** → **Add Laragon to Path**.
 4. Contrôle : touche Windows → `cmd` → `php -v` doit afficher « PHP 8.3… ».
 
-Pas besoin de MySQL : GymFlow utilise par défaut une base **SQLite** (un simple fichier).
+Pas besoin de MySQL : L'application utilise par défaut une base **SQLite** (un simple fichier).
 
 ### Préparer le dossier sur VOTRE PC (le développeur)
 
@@ -47,18 +47,28 @@ Copiez ensuite **tout le dossier** du projet sur une clé USB, **sans** :
 
 ### Chez le client
 
-1. Copiez le dossier dans `C:\GymFlow` (court et sans espaces, c'est plus sûr).
-2. Double-clic sur **`installer-gymflow.bat`**. Il :
+1. Copiez le dossier dans `C:\GestionSalle` (court et sans espaces, c'est plus sûr).
+2. Double-clic sur **`installer.bat`**. Il :
    - crée la configuration de production (`.env`, avec `APP_DEBUG=false`) ;
    - génère une **clé unique** pour ce client (qui sert à chiffrer les mots de passe de la pointeuse et les sessions) ;
    - crée la base de données et les comptes de départ.
 3. Double-clic sur **`activer-demarrage-auto.bat`**.
-4. Double-clic sur **`demarrer-gymflow.bat`**, puis connectez-vous et **changez les mots de passe** (c'est obligatoire à la première connexion).
+4. Double-clic sur **`demarrer.bat`**, puis connectez-vous et **changez les mots de passe** (c'est obligatoire à la première connexion).
 5. Réglez la salle : Administration → **Paramètres** (nom, adresse, téléphone, e-mail), **Formules & tarifs**, **Utilisateurs** (un compte par caissière), **Pointeuses** (voir `GUIDE-CONFIGURATION-POINTEUSE.md`).
+
+### Avant la mise en service : effacer les données de test
+
+Après vos essais (clients « Test », tickets, passages…), videz l'application **une seule fois**, avant que la salle ne commence à l'utiliser :
+
+```
+php artisan salle:effacer-donnees
+```
+
+Tapez `EFFACER` pour confirmer. Sont effacés : clients, abonnements, encaissements, passages (et les membres de test sont retirés de la pointeuse). Sont conservés : comptes du personnel, formules et tarifs, paramètres, pointeuses. Une copie de la base est faite juste avant dans `storage\app\sauvegardes\`.
 
 ### « Est-ce la même commande que chez moi ? »
 
-Oui, mais **vous n'avez plus à la taper** : `demarrer-gymflow.bat` lance
+Oui, mais **vous n'avez plus à la taper** : `demarrer.bat` lance
 
 ```
 php artisan serve --host=127.0.0.1 --port=8005
@@ -69,15 +79,15 @@ avec le port **8005** fixé. L'adresse à ouvrir dans le navigateur est toujours
 
 ---
 
-## 2. Si le PC s'éteint ou si GymFlow s'arrête
+## 2. Si le PC s'éteint ou si l'application s'arrête
 
 Tout est prévu pour qu'une personne qui n'est pas développeur n'ait **rien à taper** :
 
 | Situation | Ce qui se passe |
 |---|---|
-| Le PC redémarre (coupure de courant, mise à jour Windows) | Grâce à `activer-demarrage-auto.bat`, GymFlow se relance à l'ouverture de session |
-| GymFlow plante ou une fenêtre est fermée par erreur | Chaque partie redémarre seule au bout de 5 secondes |
-| On double-clique deux fois sur `demarrer-gymflow.bat` | Le 2ᵉ clic ouvre seulement le navigateur, sans lancer un doublon |
+| Le PC redémarre (coupure de courant, mise à jour Windows) | Grâce à `activer-demarrage-auto.bat`, l'application se relance à l'ouverture de session |
+| L'application plante ou une fenêtre est fermée par erreur | Chaque partie redémarre seule au bout de 5 secondes |
+| On double-clique deux fois sur `demarrer.bat` | Le 2ᵉ clic ouvre seulement le navigateur, sans lancer un doublon |
 
 Pour aller plus loin :
 
@@ -87,13 +97,13 @@ Pour aller plus loin :
 
 ### Imprimante à tickets (impression directe)
 
-`demarrer-gymflow.bat` ouvre GymFlow dans une **fenêtre dédiée** de Chrome (ou Edge) réglée pour imprimer **sans fenêtre de confirmation** : à chaque encaissement, le ticket part tout seul sur l'**imprimante par défaut de Windows**.
+`demarrer.bat` ouvre l'application dans une **fenêtre dédiée** de Chrome (ou Edge) réglée pour imprimer **sans fenêtre de confirmation** : à chaque encaissement, le ticket part tout seul sur l'**imprimante par défaut de Windows**.
 
 1. Installez l'imprimante thermique avec le pilote du fabricant (CD ou site du fabricant), papier **80 mm**.
 2. Windows + I → Bluetooth et appareils → **Imprimantes et scanners** :
    - désactivez **« Laisser Windows gérer mon imprimante par défaut »** ;
    - cliquez sur l'imprimante thermique → **Définir par défaut**.
-3. Fermez toutes les fenêtres GymFlow et relancez `demarrer-gymflow.bat`.
+3. Fermez toutes les fenêtres de l'application et relancez `demarrer.bat`.
 
 | Situation | Ce qui se passe |
 |---|---|
@@ -101,28 +111,28 @@ Pour aller plus loin :
 | Imprimante éteinte, débranchée ou sans papier | Windows garde le ticket **en file d'attente** et l'imprime dès son retour ; il reste réimprimable depuis Encaissements |
 | Aucune imprimante installée | Windows prend « Microsoft Print to PDF » et propose d'**enregistrer un PDF** : c'est ce qu'on voit pendant les tests, c'est normal |
 
-> Ne pas ouvrir GymFlow depuis un Chrome ordinaire pour encaisser : il afficherait la fenêtre d'impression à chaque ticket. Utilisez la fenêtre ouverte par `demarrer-gymflow.bat` (la 1ʳᵉ fois, connectez-vous dedans : elle a son propre profil).
+> Ne pas ouvrir l'application depuis un Chrome ordinaire pour encaisser : il afficherait la fenêtre d'impression à chaque ticket. Utilisez la fenêtre ouverte par `demarrer.bat` (la 1ʳᵉ fois, connectez-vous dedans : elle a son propre profil).
 
 ### Sauvegardes
 
-À chaque démarrage, `demarrer-gymflow.bat` fait une **sauvegarde du jour** de la base dans `storage\app\sauvegardes\` (les 30 dernières sont gardées).
+À chaque démarrage, `demarrer.bat` fait une **sauvegarde du jour** de la base dans `storage\app\sauvegardes\` (les 30 dernières sont gardées).
 **Copiez ce dossier sur une clé USB une fois par semaine** : si le PC tombe en panne, c'est ce qui permet de tout récupérer.
 
-### Mettre à jour GymFlow chez le client
+### Mettre à jour l'application chez le client
 
 1. Remplacez les fichiers par la nouvelle version, **sans** toucher à `.env`, `database\database.sqlite` ni `storage\`.
 2. Dans le dossier, ouvrez `cmd` et tapez : `php artisan migrate --force`.
-3. Relancez `demarrer-gymflow.bat`.
+3. Relancez `demarrer.bat`.
 
 ---
 
-## 3. Plus tard : GymFlow en ligne
+## 3. Plus tard : L'application en ligne
 
 ### Ce qui change
 
 | | En local (aujourd'hui) | En ligne (plus tard) |
 |---|---|---|
-| Où tourne GymFlow | Sur le PC de caisse | Sur un serveur (VPS) avec un nom de domaine |
+| Où tourne l'application | Sur le PC de caisse | Sur un serveur (VPS) avec un nom de domaine |
 | Accès | Seulement depuis le PC de la salle | Depuis n'importe où (le gérant chez lui, sur son téléphone) |
 | Internet | Inutile | **Obligatoire** à la salle |
 | Base de données | SQLite (un fichier) | MySQL sur le serveur |
