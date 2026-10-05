@@ -3,8 +3,8 @@
 use App\Http\Controllers\Api\PointageController;
 use Illuminate\Support\Facades\Route;
 
-// Appelé par le lecteur (empreinte, badge RFID, QR) ou par l'agent local du poste d'accueil
-Route::middleware(['lecteur', 'throttle:120,1'])->group(function () {
+// API générique avec token (agent local, autre appareil). La pointeuse ZKTeco,
+// elle, passe par le protocole Cloud/ADMS : voir routes/pointeuse.php
+Route::middleware(['throttle:120,1', 'lecteur'])->group(function () {
     Route::post('/pointage/empreinte', [PointageController::class, 'empreinte'])->name('api.pointage.empreinte');
-    Route::post('/pointage/carte', [PointageController::class, 'carte'])->name('api.pointage.carte');
 });

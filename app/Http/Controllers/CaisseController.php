@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Abonnement;
 use App\Models\Client;
-use App\Models\Cloture;
-use App\Models\Coach;
 use App\Models\Formule;
 use App\Models\Paiement;
-use App\Models\Produit;
+use App\Models\Parametre;
 use App\Services\CaisseService;
-use App\Services\KpiService;
 use App\Services\RecuService;
+use App\Support\Recherche;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,50 +24,60 @@ class CaisseController extends Controller
         private RecuService $recus,
     ) {}
 
-    public function index(Request $request, KpiService $kpi): View
+    public function index(Request $request): View
     {
-        $caisse = $request->user()->caisseActive();
-        $client = $request->integer('client_id') ? Client::find($request->integer('client_id')) : null;
-        $formules = Formule::where('actif', true)->orderBy('type')->orderBy('prix')->get();
+        $user = $request->user();
+
+        // La caissière ne voit que ses propres encaissements ; l'admin voit tout
+        $paiementsJour = Paiement::with(['client', 'abonnement.formule', 'user:id,name'])
+            ->whereDate('created_at', today()->toDateString())
+            ->when(! $user->isAdmin(), fn ($q) => $q->where('user_id', $user->id))
+            ->latest('id')
+            ->get();
+
+        $valides = $paiementsJour->reject->estAnnule();
 
         return view('caisse.index', [
-            'caisse' => $caisse,
-            'cloturee' => $caisse->estClotureeLe(),
-            'resume' => $kpi->resumeCaisse($caisse),
-            'aRegulariser' => $kpi->refusARegulariser(),
-            'formules' => $formules->whereIn('type', [Formule::TYPE_ABONNEMENT, Formule::TYPE_CARNET])->values(),
-            'formulesCoaching' => $formules->where('type', Formule::TYPE_COACHING)->values(),
-            'coachs' => Coach::where('actif', true)->orderBy('nom')->get(),
-            'produits' => Produit::where('actif', true)->orderBy('nom')->get(),
-            'clientPreselectionne' => $client,
-            'finDroitsPreselectionne' => $client?->finDesDroits(),
-            'premierAbonnement' => $client ? ! $client->abonnements()->where('statut', 'actif')->exists() : true,
+            'formules' => Formule::where('actif', true)->orderBy('duree_jours')->get(),
+            'tarifJournalier' => Parametre::tarifJournalier(),
+            'paiements' => $paiementsJour->take(20),
+            'totalJour' => $valides->sum('montant'),
+            'nombreJour' => $valides->count(),
+            'parMode' => $valides->groupBy('mode')->map->sum('montant')->sortDesc(),
+            'onglet' => $request->integer('client_id') ? 'abonnement'
+                : (in_array($request->query('onglet'), ['abonnement', 'renouvellement'], true) ? $request->query('onglet') : 'passage'),
+            'aRenouveler' => $this->aRenouveler(),
+            'clientPreselectionne' => $request->integer('client_id')
+                ? Client::find($request->integer('client_id'))
+                : null,
         ]);
     }
 
     public function journalier(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'client_id' => ['nullable', 'integer', 'exists:clients,id'],
+            'client_id' => ['nullable', 'integer', Rule::exists('clients', 'id')->whereNull('deleted_at')],
             'nom' => ['nullable', 'string', 'max:100'],
-            'telephone' => ['nullable', 'string', 'max:20'],
-            'montant' => ['required', 'integer', 'min:0', 'max:1000000'],
-            'mode' => ['required', Rule::in(Paiement::MODES_CAISSE)],
-            'reference' => ['nullable', 'string', 'max:100'],
+            'telephone' => ['nullable', 'string', 'regex:/^[0-9+() .-]{6,20}$/'],
+            'quantite' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'mode' => ['required', Rule::in(array_keys(Paiement::MODES))],
+            'reference' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._\/-]*$/'],
         ]);
 
-        return $this->apresPaiement($this->caisse->encaisserJournalier($data, $request->user()), 'Entrée journalière encaissée, accès validé.');
+        $paiement = $this->caisse->encaisserJournalier($data, $request->user());
+
+        return $this->apresPaiement($paiement, 'Entrée journalière encaissée, accès validé.');
     }
 
     public function abonnement(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'client_id' => ['required', 'integer', 'exists:clients,id'],
-            'formule_id' => ['required', 'integer', Rule::exists('formules', 'id')->where('actif', true)->whereIn('type', [Formule::TYPE_ABONNEMENT, Formule::TYPE_CARNET])],
-            'mode' => ['required', Rule::in(Paiement::MODES_CAISSE)],
-            'reference' => ['nullable', 'string', 'max:100'],
-            'code_promo' => ['nullable', 'string', 'max:30'],
-            'frais_inscription' => ['nullable', 'boolean'],
+            'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->whereNull('deleted_at')],
+            'formule_id' => ['required', 'integer', Rule::exists('formules', 'id')->where('actif', true)],
+            'mode' => ['required', Rule::in(array_keys(Paiement::MODES))],
+            'reference' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._\/-]*$/'],
+        ], [
+            'client_id.required' => 'Choisissez le client à abonner (recherche par nom ou téléphone).',
         ]);
 
         $paiement = $this->caisse->souscrireAbonnement(
@@ -81,71 +90,22 @@ class CaisseController extends Controller
         return $this->apresPaiement($paiement, 'Abonnement enregistré.');
     }
 
-    public function coaching(Request $request): RedirectResponse
+    /**
+     * Abonnés dont la fin approche (7 jours) ou est passée depuis moins de 30 jours,
+     * et qui n'ont pas déjà prolongé : la liste de l'onglet « Renouvellement ».
+     */
+    private function aRenouveler()
     {
-        $data = $request->validate([
-            'client_id' => ['required', 'integer', 'exists:clients,id'],
-            'formule_id' => ['required', 'integer', Rule::exists('formules', 'id')->where('actif', true)->where('type', Formule::TYPE_COACHING)],
-            'coach_id' => ['nullable', 'integer', 'exists:coachs,id'],
-            'mode' => ['required', Rule::in(Paiement::MODES_CAISSE)],
-            'reference' => ['nullable', 'string', 'max:100'],
-        ]);
+        $finParClient = Abonnement::where('statut', Abonnement::STATUT_ACTIF)
+            ->selectRaw('client_id, MAX(date_fin) as fin')
+            ->groupBy('client_id');
 
-        $paiement = $this->caisse->vendreCoaching(
-            Client::findOrFail($data['client_id']),
-            Formule::findOrFail($data['formule_id']),
-            ! empty($data['coach_id']) ? Coach::find($data['coach_id']) : null,
-            $data,
-            $request->user(),
-        );
-
-        return $this->apresPaiement($paiement, 'Pack de coaching vendu.');
-    }
-
-    public function vente(Request $request): RedirectResponse
-    {
-        $data = $request->validate([
-            'quantites' => ['required', 'array'],
-            'quantites.*' => ['nullable', 'integer', 'min:0', 'max:999'],
-            'mode' => ['required', Rule::in(Paiement::MODES_CAISSE)],
-            'reference' => ['nullable', 'string', 'max:100'],
-        ]);
-
-        return $this->apresPaiement($this->caisse->vendreProduits($data['quantites'], $data, $request->user()), 'Vente enregistrée.');
-    }
-
-    public function cloture(Request $request, KpiService $kpi): View
-    {
-        $caisse = $request->user()->caisseActive();
-
-        return view('caisse.cloture', [
-            'caisse' => $caisse,
-            'resume' => $kpi->resumeCaisse($caisse),
-            'coupures' => Cloture::COUPURES,
-            'fond' => (int) config('salle.fond_caisse'),
-        ]);
-    }
-
-    public function cloturer(Request $request): RedirectResponse
-    {
-        $data = $request->validate([
-            'coupures' => ['nullable', 'array'],
-            'coupures.*' => ['nullable', 'integer', 'min:0', 'max:100000'],
-            'fond_caisse' => ['required', 'integer', 'min:0', 'max:10000000'],
-            'motif_ecart' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $cloture = $this->caisse->cloturer(
-            $request->user()->caisseActive(),
-            $request->user(),
-            $data['coupures'] ?? [],
-            (int) $data['fond_caisse'],
-            $data['motif_ecart'] ?? null,
-        );
-
-        return redirect()->route('caisse.index')->with('succes', $cloture->ecart === 0
-            ? 'Caisse clôturée : le tiroir est juste.'
-            : 'Caisse clôturée avec un écart de '.number_format($cloture->ecart, 0, ',', ' ').' F, signalé à l’administrateur.');
+        return Client::abonnes()
+            ->joinSub($finParClient, 'droits', 'droits.client_id', '=', 'clients.id')
+            ->whereBetween('droits.fin', [today()->subDays(30)->toDateString(), today()->addDays(7)->toDateString()])
+            ->orderBy('droits.fin')
+            ->limit(30)
+            ->get(['clients.*', 'droits.fin']);
     }
 
     /** Recherche de clients pour les formulaires de caisse. */
@@ -153,18 +113,11 @@ class CaisseController extends Controller
     {
         $q = trim((string) $request->query('q', ''));
 
-        if (mb_strlen($q) < 2) {
-            return response()->json([]);
-        }
-
+        // Sans recherche : les 20 premiers clients (ordre alphabétique) pour la liste déroulante
         $clients = Client::query()
-            ->where(fn ($w) => $w->where('nom', 'like', "%{$q}%")
-                ->orWhere('prenoms', 'like', "%{$q}%")
-                ->orWhere('telephone', 'like', "%{$q}%")
-                ->orWhere('empreinte_id', $q)
-                ->orWhere('carte_id', $q))
-            ->orderBy('nom')
-            ->limit(10)
+            ->when($q !== '', fn ($query) => Recherche::appliquer($query, $q, ['nom', 'prenoms', 'telephone', 'empreinte_id']))
+            ->orderBy('nom')->orderBy('prenoms')
+            ->limit(20)
             ->get();
 
         return response()->json($clients->map(fn (Client $c) => [
@@ -172,10 +125,7 @@ class CaisseController extends Controller
             'nom' => $c->nom_complet,
             'type' => Client::TYPES[$c->type] ?? $c->type,
             'telephone' => $c->telephone,
-            'empreinte' => $c->empreinte_id,
             'fin_droits' => $c->finDesDroits()?->format('d/m/Y'),
-            'fin_droits_iso' => $c->finDesDroits()?->toDateString(),
-            'premier' => ! $c->abonnements()->where('statut', 'actif')->exists(),
         ]));
     }
 
@@ -187,8 +137,9 @@ class CaisseController extends Controller
             } catch (Throwable $e) {
                 report($e);
 
+                // Le détail technique reste dans les logs, pas à l'écran
                 return redirect()->route('recus.show', ['paiement' => $paiement, 'imprimer' => 1])
-                    ->with('erreur', "Paiement enregistré mais l'impression a échoué : {$e->getMessage()}");
+                    ->with('erreur', "Paiement enregistré, mais l'imprimante ne répond pas. Imprimez le reçu depuis cette page.");
             }
 
             return redirect()->route('caisse.index')

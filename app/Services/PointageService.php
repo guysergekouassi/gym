@@ -7,63 +7,53 @@ use App\Models\Lecteur;
 use App\Models\Paiement;
 use App\Models\Passage;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Support\Horaires;
+use Carbon\CarbonInterface;
 
 class PointageService
 {
-    public function __construct(private PorteService $porte) {}
-
-    /** Passage via le lecteur d'empreinte. */
-    public function parEmpreinte(string $empreinteId, ?Lecteur $lecteur = null): Passage
+    /**
+     * Passage à la pointeuse : doigt (ou carte) reconnu par l'appareil, qui transmet
+     * le n° d'utilisateur. Sources : la pointeuse en réseau (protocole Cloud/ADMS),
+     * l'API avec token, ou la saisie du n° au clavier sur l'écran d'accueil (secours).
+     *
+     * $quand = heure réelle du passage (la pointeuse peut renvoyer des pointages
+     * enregistrés pendant une coupure réseau).
+     */
+    public function parEmpreinte(string $empreinteId, ?Lecteur $lecteur = null, ?User $poste = null, ?CarbonInterface $quand = null): Passage
     {
+        // Pointage horodaté déjà reçu (la pointeuse renvoie parfois le même lot) : on ne le double pas
+        if ($lecteur && $quand) {
+            $existant = Passage::where('lecteur_id', $lecteur->id)
+                ->where('empreinte_id', $empreinteId)
+                ->where('passe_le', $quand)
+                ->first();
+
+            if ($existant) {
+                return $existant;
+            }
+        }
+
+        $quand ??= now();
+
         $client = Client::where('empreinte_id', $empreinteId)->first();
-
-        return $this->pointer($client, Passage::METHODE_EMPREINTE, $empreinteId, 'empreinte_inconnue', $lecteur);
-    }
-
-    /** Passage par badge RFID ou QR code (n° de carte ou code d'accès personnel). */
-    public function parCarte(string $code, ?Lecteur $lecteur = null, ?int $salleId = null): Passage
-    {
-        $code = trim($code);
-        $client = Client::where('carte_id', $code)->orWhere('code_acces', strtoupper($code))->first();
-
-        return $this->pointer($client, Passage::METHODE_CARTE, $code, 'carte_inconnue', $lecteur, $salleId);
-    }
-
-    /** Passage validé par la caissière après encaissement d'un journalier. */
-    public function parCaisse(Paiement $paiement, ?User $caissier): Passage
-    {
-        return $this->enregistrer([
-            'client_id' => $paiement->client_id,
-            'user_id' => $caissier?->id,
-            'paiement_id' => $paiement->id,
-            'salle_id' => $paiement->caisse?->salle_id,
-            'methode' => Passage::METHODE_CAISSE,
-            'statut' => Passage::STATUT_AUTORISE,
-        ]);
-    }
-
-    private function pointer(?Client $client, string $methode, string $identifiant, string $motifInconnu, ?Lecteur $lecteur, ?int $salleId = null): Passage
-    {
-        $salleId ??= $lecteur?->salle_id;
 
         if (! $client) {
             return $this->enregistrer([
-                'lecteur_id'   => $lecteur?->id,
-                'salle_id'     => $salleId,
-                'methode'      => $methode,
-                'statut'       => Passage::STATUT_REFUSE,
-                'motif'        => $motifInconnu,
-                'empreinte_id' => $identifiant,
+                'lecteur_id' => $lecteur?->id,
+                'user_id' => $poste?->id,
+                'methode' => Passage::METHODE_EMPREINTE,
+                'statut' => Passage::STATUT_REFUSE,
+                'motif' => 'empreinte_inconnue',
+                'empreinte_id' => $empreinteId,
+                'passe_le' => $quand,
             ]);
         }
 
-        // --- Anti-doublon : scan répété trop vite (selon config) → ignorer ---
-        $antiDoublonSecondes = (int) config('salle.anti_doublon_secondes', 300);
+        // Anti-doublon : un client qui repose le doigt plusieurs fois ne crée qu'un passage
         $recent = Passage::where('client_id', $client->id)
             ->where('statut', Passage::STATUT_AUTORISE)
-            ->where('passe_le', '>=', now()->subSeconds($antiDoublonSecondes))
-            ->whereNull('sorti_le')
+            ->whereBetween('passe_le', [$quand->copy()->subSeconds((int) config('salle.anti_doublon_secondes')), $quand])
             ->latest('passe_le')
             ->first();
 
@@ -71,88 +61,111 @@ class PointageService
             return $recent;
         }
 
-        // --- Sortie d'un abonné : re-scan au moins 5 min après une entrée ouverte du jour ---
-        // Avant 5 min, c'est un doublon. Sortir n'exige aucun droit (et ne décompte pas d'entrée de carnet).
-        if ($client->type === Client::TYPE_ABONNE) {
-            $sortieRecente = Passage::where('client_id', $client->id)
-                ->where('sorti_le', '>=', now()->subSeconds($antiDoublonSecondes))
-                ->latest('sorti_le')
-                ->first();
+        [$autorise, $motif] = $this->verifierDroit($client, $quand);
 
-            if ($sortieRecente) {
-                return $sortieRecente;
-            }
+        return $this->enregistrer([
+            'client_id' => $client->id,
+            'lecteur_id' => $lecteur?->id,
+            'user_id' => $poste?->id,
+            'methode' => Passage::METHODE_EMPREINTE,
+            'statut' => $autorise ? Passage::STATUT_AUTORISE : Passage::STATUT_REFUSE,
+            'sens' => $autorise ? $this->sens($client, $quand) : null,
+            'motif' => $motif,
+            'empreinte_id' => $empreinteId,
+            'passe_le' => $quand,
+        ]);
+    }
 
-            $entreeOuverte = Passage::where('client_id', $client->id)
-                ->where('statut', Passage::STATUT_AUTORISE)
-                ->whereDate('passe_le', today()->toDateString())
-                ->whereNull('sorti_le')
-                ->latest('passe_le')
-                ->first();
-
-            if ($entreeOuverte && $entreeOuverte->passe_le->gt(now()->subMinutes(5))) {
-                return $entreeOuverte;
-            }
-
-            if ($entreeOuverte) {
-                $entreeOuverte->update(['sorti_le' => now()]);
-                $this->porte->ouvrir($entreeOuverte);
-
-                return $entreeOuverte;
-            }
+    /** Membre reconnu par la pointeuse mais refusé par elle (période de validité dépassée…). */
+    public function refus(string $empreinteId, Lecteur $lecteur, CarbonInterface $quand): Passage
+    {
+        $existant = Passage::where('lecteur_id', $lecteur->id)->where('empreinte_id', $empreinteId)->where('passe_le', $quand)->first();
+        if ($existant) {
+            return $existant;
         }
 
-        // --- Nouveau passage (entrée) ---
-        $passage = DB::transaction(function () use ($client, $methode, $identifiant, $lecteur, $salleId) {
-            [$autorise, $motif] = $this->verifierDroit($client);
+        $client = Client::where('empreinte_id', $empreinteId)->first();
+        $motif = $client ? ($this->verifierDroit($client, $quand)[1] ?? 'refus_pointeuse') : 'empreinte_inconnue';
 
-            return $this->enregistrer([
-                'client_id'    => $client->id,
-                'lecteur_id'   => $lecteur?->id,
-                'salle_id'     => $salleId,
-                'methode'      => $methode,
-                'statut'       => $autorise ? Passage::STATUT_AUTORISE : Passage::STATUT_REFUSE,
-                'motif'        => $motif,
-                'empreinte_id' => $identifiant,
-            ]);
-        });
+        return $this->enregistrer([
+            'client_id' => $client?->id,
+            'lecteur_id' => $lecteur->id,
+            'methode' => Passage::METHODE_EMPREINTE,
+            'statut' => Passage::STATUT_REFUSE,
+            'motif' => $motif,
+            'empreinte_id' => $empreinteId,
+            'passe_le' => $quand,
+        ]);
+    }
 
-        $this->porte->ouvrir($passage);
-
-        return $passage;
+    /** Doigt inconnu de la pointeuse. */
+    public function refusInconnu(Lecteur $lecteur, CarbonInterface $quand): Passage
+    {
+        return Passage::firstOrCreate(
+            ['lecteur_id' => $lecteur->id, 'empreinte_id' => null, 'passe_le' => $quand, 'motif' => 'empreinte_inconnue'],
+            ['methode' => Passage::METHODE_EMPREINTE, 'statut' => Passage::STATUT_REFUSE],
+        );
     }
 
     /**
-     * Droit d'entrée. Un abonnement à la durée prime ; sinon un carnet est décompté d'une entrée.
-     *
-     * @return array{0: bool, 1: ?string}
+     * Passage validé par la caissière après encaissement d'un journalier.
+     * Le ticket vaut arrivée, sauf pour un client qui a une empreinte : c'est alors
+     * son badge sur la pointeuse qui marque l'arrivée (puis le départ).
      */
-    private function verifierDroit(Client $client): array
+    public function parCaisse(Paiement $paiement, User $caissier, bool $avecClient = true): Passage
     {
-        if ($client->gelEnCours()) {
-            return [false, 'abonnement_gele'];
+        $client = $avecClient ? $paiement->client : null;
+
+        return $this->enregistrer([
+            'client_id' => $client?->id,
+            'user_id' => $caissier->id,
+            'paiement_id' => $paiement->id,
+            'methode' => Passage::METHODE_CAISSE,
+            'statut' => Passage::STATUT_AUTORISE,
+            'sens' => $client?->empreinte_id ? null : Passage::SENS_ENTREE,
+            'passe_le' => now(),
+        ]);
+    }
+
+    /**
+     * 1er badge autorisé du jour = arrivée ; départ = badge suivant fait à partir de l'heure
+     * de fin des séances du jour (Paramètres) ; tout autre badge = séance déjà enregistrée.
+     */
+    private function sens(Client $client, CarbonInterface $quand): string
+    {
+        $dejaBadge = Passage::where('client_id', $client->id)
+            ->where('statut', Passage::STATUT_AUTORISE)
+            ->whereIn('sens', [Passage::SENS_ENTREE, Passage::SENS_DEPART])
+            ->whereBetween('passe_le', [$quand->copy()->startOfDay(), $quand->copy()->endOfDay()])
+            ->count();
+
+        if ($dejaBadge === 0) {
+            return Passage::SENS_ENTREE;
         }
 
+        // Le départ ne se badge qu'à partir de l'heure de fin des séances (si elle est renseignée)
+        $fin = Horaires::finDuJour($quand);
+        if ($dejaBadge === 1 && ($fin === null || $quand->format('H:i') >= $fin)) {
+            return Passage::SENS_DEPART;
+        }
+
+        return Passage::SENS_DEJA;
+    }
+
+    /** @return array{0: bool, 1: ?string} */
+    private function verifierDroit(Client $client, CarbonInterface $quand): array
+    {
         if ($client->type === Client::TYPE_ABONNE) {
-            $abonnement = $client->abonnementActif();
+            $valide = $client->abonnements()->enCours($quand)->exists();
 
-            if (! $abonnement) {
-                $carnetVide = $client->abonnements()->enCours()->where('entrees_restantes', 0)->exists();
-
-                return [false, $carnetVide ? 'carnet_epuise' : 'abonnement_expire'];
-            }
-
-            if ($abonnement->estCarnet()) {
-                $abonnement->decrement('entrees_restantes');
-            }
-
-            return [true, null];
+            return $valide ? [true, null] : [false, 'abonnement_expire'];
         }
 
-        // Journalier enrôlé : il doit avoir payé aujourd'hui
-        $aPaye = $client->paiements()->valides()
+        // Journalier enrôlé : il doit avoir payé (et non annulé) le jour même
+        $aPaye = $client->paiements()
+            ->valides()
             ->where('type', Paiement::TYPE_JOURNALIER)
-            ->whereDate('created_at', today()->toDateString())
+            ->whereDate('created_at', $quand->toDateString())
             ->exists();
 
         return $aPaye ? [true, null] : [false, 'paiement_requis'];
@@ -160,6 +173,6 @@ class PointageService
 
     private function enregistrer(array $attributs): Passage
     {
-        return Passage::create($attributs + ['passe_le' => now()]);
+        return Passage::create($attributs);
     }
 }

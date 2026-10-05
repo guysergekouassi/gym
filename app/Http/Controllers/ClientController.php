@@ -4,60 +4,86 @@ namespace App\Http\Controllers;
 
 use App\Models\Abonnement;
 use App\Models\Client;
-use App\Models\Coach;
-use App\Models\Gel;
-use App\Models\Message;
-use App\Models\PackCoaching;
 use App\Models\Passage;
-use App\Models\SeanceCoaching;
-use App\Services\GelService;
-use App\Services\MessageService;
-use App\Support\Journal;
-use Illuminate\Http\JsonResponse;
+use App\Services\KpiService;
+use App\Services\SynchroPointeuseService;
+use App\Support\Empreinte;
+use App\Support\Recherche;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ClientController extends Controller
 {
+    public function __construct(private SynchroPointeuseService $pointeuse) {}
+
     public function index(Request $request): View
     {
+        $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'type' => ['nullable', Rule::in(array_keys(Client::TYPES))],
+            'statut' => ['nullable', Rule::in(['en_regle', 'expire', 'expire_bientot', 'a_relancer', 'masques'])],
+        ]);
+
+        $jour = today()->toDateString();
+        $enRegle = fn ($q) => $q->where('statut', Abonnement::STATUT_ACTIF)->whereDate('date_fin', '>=', $jour);
+
+        // Formule de l'abonnement le plus récent (affichée dans la liste)
+        $formuleActuelle = Abonnement::query()
+            ->join('formules', 'formules.id', '=', 'abonnements.formule_id')
+            ->whereColumn('abonnements.client_id', 'clients.id')
+            ->where('abonnements.statut', Abonnement::STATUT_ACTIF)
+            ->orderByDesc('abonnements.date_fin')
+            ->limit(1)
+            ->select('formules.nom');
+
+        $masques = $request->query('statut') === 'masques' && $request->user()->isAdmin();
+
         $clients = Client::query()
-            ->when($request->filled('q'), function ($query) use ($request) {
-                $q = $request->string('q')->trim()->value();
-                $query->where(fn ($w) => $w->where('nom', 'like', "%{$q}%")
-                    ->orWhere('prenoms', 'like', "%{$q}%")
-                    ->orWhere('telephone', 'like', "%{$q}%")
-                    ->orWhere('empreinte_id', $q)
-                    ->orWhere('carte_id', $q));
-            })
-            ->when($request->filled('type'), fn ($q) => $q->where('type', $request->string('type')->value()))
+            ->when($masques, fn ($q) => $q->onlyTrashed())
+            ->select('clients.*')
+            ->addSelect(['formule_actuelle' => $formuleActuelle])
+            ->when($request->filled('q'), fn ($query) => Recherche::appliquer(
+                $query, (string) $request->query('q'), ['nom', 'prenoms', 'telephone', 'empreinte_id']
+            ))
+            ->when($request->filled('type'), fn ($q) => $q->where('type', $request->query('type')))
+            ->when($request->query('statut') === 'en_regle', fn ($q) => $q->whereHas('abonnements', $enRegle))
+            ->when($request->query('statut') === 'expire', fn ($q) => $q->abonnes()->whereDoesntHave('abonnements', $enRegle))
+            ->when($request->query('statut') === 'expire_bientot', fn ($q) => $q->whereIn(
+                'id', app(KpiService::class)->expirantBientot()->pluck('client_id')
+            ))
+            ->when($request->query('statut') === 'a_relancer', fn ($q) => $q->whereIn(
+                'id', app(KpiService::class)->abonnesMoinsActifs()->pluck('id')
+            ))
             ->withMax(['passages as dernier_passage_le' => fn ($q) => $q->where('statut', Passage::STATUT_AUTORISE)], 'passe_le')
-            ->withMax(['abonnements as fin_droits' => fn ($q) => $q
-                ->where('statut', Abonnement::STATUT_ACTIF)
-                ->whereNull('entrees_restantes')
-                ->whereDate('date_fin', '>=', today()->toDateString())], 'date_fin')
+            ->withMax(['abonnements as fin_droits' => fn ($q) => $q->where('statut', Abonnement::STATUT_ACTIF)], 'date_fin')
             ->orderBy('nom')
             ->paginate(25)
             ->withQueryString();
 
-        return view('clients.index', ['clients' => $clients]);
+        return view('clients.index', [
+            'clients' => $clients,
+            'compteurs' => [
+                'tous' => Client::count(),
+                Client::TYPE_ABONNE => Client::abonnes()->count(),
+                Client::TYPE_JOURNALIER => Client::journaliers()->count(),
+            ],
+            'numeroSuggere' => Empreinte::prochainNumero(),
+            'masques' => $masques,
+            'nombreMasques' => $request->user()->isAdmin() ? Client::onlyTrashed()->count() : 0,
+        ]);
     }
 
-    public function create(Request $request): View
+    public function create(): View
     {
-        // Pré-remplissage depuis « Enrôler » (empreinte ou carte inconnue à l'entrée) ou un prospect
-        return view('clients.form', ['client' => new Client([
-            'type' => Client::TYPE_ABONNE,
-            'empreinte_id' => $request->string('empreinte_id')->limit(64, '')->value() ?: null,
-            'carte_id' => $request->string('carte_id')->limit(64, '')->value() ?: null,
-            'nom' => $request->string('nom')->limit(100, '')->value() ?: null,
-            'telephone' => $request->string('telephone')->limit(20, '')->value() ?: null,
-        ])]);
+        return view('clients.form', [
+            'client' => new Client(['type' => Client::TYPE_ABONNE]),
+            'numeroSuggere' => Empreinte::prochainNumero(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -65,11 +91,17 @@ class ClientController extends Controller
         $data = $this->valider($request);
 
         if ($request->hasFile('photo')) {
-            $data['photo_path'] = $request->file('photo')->store('clients', 'public');
+            $data['photo_path'] = $this->stockerPhoto($request->file('photo'));
         }
 
+        $data['date_adhesion'] ??= today(); // par défaut : inscrit aujourd'hui
         $client = Client::create($data);
-        Journal::noter('client.cree', "Fiche de {$client->nom_complet} créée", $client);
+        $this->pointeuse->ajouterOuModifier($client);
+
+        if ($request->boolean('abonner') || $request->input('apres') === 'abonner') {
+            return redirect()->route('caisse.index', ['client_id' => $client->id])
+                ->with('succes', 'Client enregistré. Choisissez maintenant sa formule.');
+        }
 
         return redirect()->route('clients.show', $client)->with('succes', 'Client enregistré.');
     }
@@ -78,46 +110,21 @@ class ClientController extends Controller
     {
         $client->load([
             'abonnements' => fn ($q) => $q->with('formule')->latest('date_debut'),
-            'paiements' => fn ($q) => $q->with(['caisse:id,nom', 'abonnement.formule', 'lignes', 'pack.formule'])->latest()->limit(30),
-            'gels' => fn ($q) => $q->latest('du'),
-            'mesures' => fn ($q) => $q->orderBy('date'),
-            'packs' => fn ($q) => $q->with(['coach', 'formule'])->latest(),
-            'parrain', 'filleuls',
+            'paiements' => fn ($q) => $q->latest('id')->limit(20),
         ]);
-
-        $passages = $client->passages()->latest('passe_le')->limit(40)->get();
-        $messages = $client->messages()->latest()->limit(20)->get();
-        $finDroits = $client->finDesDroits();
-
-        // Assiduité : jours de venue sur les 14 derniers jours
-        $venues = $client->passages()->where('statut', Passage::STATUT_AUTORISE)
-            ->where('passe_le', '>=', today()->subDays(13))->pluck('passe_le')
-            ->map->toDateString()->unique()->flip();
-        $jours14 = collect(range(13, 0))->map(fn ($i) => today()->subDays($i))
-            ->map(fn ($d) => ['date' => $d, 'venu' => $venues->has($d->toDateString())]);
-
-        $habitude = $client->passages()->where('statut', Passage::STATUT_AUTORISE)
-            ->where('passe_le', '>=', today()->subDays(60))->pluck('passe_le')
-            ->countBy(fn ($d) => (int) $d->format('G'))->sortDesc()->keys()->first();
 
         return view('clients.show', [
             'client' => $client,
-            'finDroits' => $finDroits,
-            'abonnementActif' => $client->abonnementActif(),
-            'gelEnCours' => $client->gelEnCours(),
-            'passages' => $passages,
-            'jours14' => $jours14,
-            'habitude' => $habitude,
-            'depense' => $client->paiements()->valides()->sum('montant'),
-            'risque' => $this->risque($client, $finDroits, $jours14->where('venu', true)->count()),
-            'timeline' => $this->timeline($client, $passages, $messages),
-            'coachs' => Coach::where('actif', true)->orderBy('nom')->get(),
+            'finDroits' => $client->finDesDroits(),
+            'passages' => $client->passages()->latest('passe_le')->limit(30)->get(),
+            'venues30j' => $client->passages()->venues()
+                ->where('passe_le', '>=', now()->subDays(30))->count(),
         ]);
     }
 
     public function edit(Client $client): View
     {
-        return view('clients.form', ['client' => $client]);
+        return view('clients.form', ['client' => $client, 'numeroSuggere' => Empreinte::prochainNumero()]);
     }
 
     public function update(Request $request, Client $client): RedirectResponse
@@ -128,184 +135,76 @@ class ClientController extends Controller
             if ($client->photo_path) {
                 Storage::disk('public')->delete($client->photo_path);
             }
-            $data['photo_path'] = $request->file('photo')->store('clients', 'public');
+            $data['photo_path'] = $this->stockerPhoto($request->file('photo'));
         }
 
-        $avant = $client->only(array_keys($data));
+        $data['date_adhesion'] ??= $client->date_adhesion ?? today();
+        $ancienNumero = $client->empreinte_id;
         $client->update($data);
-        Journal::noter('client.modifie', "Fiche de {$client->nom_complet} modifiée", $client, [
-            'champs' => array_keys(array_diff_assoc(array_map('strval', array_filter($data, 'is_scalar')), array_map('strval', array_filter($avant, 'is_scalar')))),
-        ]);
+
+        // La pointeuse suit : changement de n° → l'ancien est retiré ; nom ou n° modifié → mise à jour
+        if ($ancienNumero && $ancienNumero !== $client->empreinte_id) {
+            $this->pointeuse->retirer($ancienNumero);
+        }
+        if ($client->wasChanged(['empreinte_id', 'nom', 'prenoms'])) {
+            $this->pointeuse->ajouterOuModifier($client);
+        }
 
         return redirect()->route('clients.show', $client)->with('succes', 'Client mis à jour.');
     }
 
     public function destroy(Client $client): RedirectResponse
     {
-        $client->delete();
-        Journal::noter('client.archive', "{$client->nom_complet} archivé", $client);
-
-        return redirect()->route('clients.index')->with('succes', 'Client archivé.');
-    }
-
-    public function geler(Request $request, Client $client, GelService $gels): RedirectResponse
-    {
-        $data = $request->validate([
-            'du' => ['required', 'date', 'after_or_equal:today'],
-            'jours' => ['required', 'integer', 'min:1', 'max:180'],
-            'motif' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $gel = $gels->geler($client, $request->date('du'), (int) $data['jours'], $data['motif'] ?? null);
-
-        return back()->with('succes', "Abonnement gelé du {$gel->du->format('d/m/Y')} au {$gel->au->format('d/m/Y')} : {$gel->jours} jour(s) ajoutés à la fin.");
-    }
-
-    public function terminerGel(Gel $gel, GelService $gels): RedirectResponse
-    {
-        $gels->terminer($gel);
-
-        return back()->with('succes', 'Gel terminé : le membre peut de nouveau entrer.');
-    }
-
-    public function mesure(Request $request, Client $client): RedirectResponse
-    {
-        $data = $request->validate([
-            'date' => ['required', 'date', 'before_or_equal:today'],
-            'poids' => ['nullable', 'numeric', 'min:20', 'max:350'],
-            'taille' => ['nullable', 'integer', 'min:100', 'max:250'],
-            'tour_taille' => ['nullable', 'numeric', 'min:30', 'max:250'],
-            'masse_grasse' => ['nullable', 'numeric', 'min:2', 'max:70'],
-            'note' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        if (! array_filter(array_intersect_key($data, array_flip(['poids', 'taille', 'tour_taille', 'masse_grasse'])))) {
-            throw ValidationException::withMessages(['poids' => 'Saisissez au moins une mesure.']);
+        // Le n° est libéré (et retiré de la pointeuse) pour pouvoir être réattribué
+        if ($client->empreinte_id) {
+            $this->pointeuse->retirer($client->empreinte_id);
         }
+        $client->forceFill(['empreinte_id' => null])->save();
+        $client->delete();
 
-        $client->mesures()->create($data + ['user_id' => $request->user()->id]);
-
-        return back()->with('succes', 'Mesure enregistrée.');
+        return redirect()->route('clients.index')->with('succes', "{$client->nom_complet} est masqué(e) : retiré(e) de la liste et de la pointeuse. Vous pouvez le réafficher depuis « Statut : masqués ».");
     }
 
-    public function suivi(Request $request, Client $client): RedirectResponse
+    /** Réafficher un client masqué (son n° de pointeuse est à réattribuer). */
+    public function restaurer(int $id): RedirectResponse
     {
-        $client->update($request->validate([
-            'objectif' => ['nullable', 'string', 'max:255'],
-            'programme' => ['nullable', 'string', 'max:5000'],
-        ]));
+        $client = Client::onlyTrashed()->findOrFail($id);
+        $client->restore();
 
-        return back()->with('succes', 'Objectif et programme enregistrés.');
-    }
-
-    /** Génère un nouveau lien personnel vers l'espace membre et prépare le message WhatsApp. */
-    public function lienMembre(Client $client, MessageService $messages): RedirectResponse
-    {
-        $lien = route('membre.lien', $client->genererJetonMembre());
-        Journal::noter('membre.lien', "Lien espace membre généré pour {$client->nom_complet}", $client);
-
-        $message = new Message([
-            'telephone' => $client->telephone,
-            'contenu' => $messages->rediger(config('salle.messagerie.modeles.lien_membre'), ['prenom' => $client->appel, 'lien' => $lien]),
-        ]);
-
-        return back()->with('lien_membre', ['url' => $lien, 'whatsapp' => $message->lienWhatsapp()]);
-    }
-
-    public function seanceCoaching(Request $request, PackCoaching $pack): RedirectResponse
-    {
-        $data = $request->validate(['coach_id' => ['nullable', 'integer', 'exists:coachs,id']]);
-
-        DB::transaction(function () use ($pack, $data, $request) {
-            $pack = PackCoaching::lockForUpdate()->findOrFail($pack->id);
-            if ($pack->statut !== 'actif' || $pack->seances_restantes < 1) {
-                throw ValidationException::withMessages(['pack' => 'Ce pack n’a plus de séances.']);
-            }
-
-            SeanceCoaching::create([
-                'pack_id' => $pack->id,
-                'coach_id' => $data['coach_id'] ?? $pack->coach_id,
-                'faite_le' => now(),
-                'user_id' => $request->user()->id,
-            ]);
-
-            $pack->decrement('seances_restantes');
-            if ($pack->seances_restantes === 0) {
-                $pack->update(['statut' => 'termine']);
-            }
-        });
-
-        return back()->with('succes', 'Séance de coaching enregistrée.');
+        return redirect()->route('clients.show', $client)
+            ->with('succes', "{$client->nom_complet} est de nouveau visible. Attribuez-lui un n° de pointeuse si besoin (Modifier).");
     }
 
     /**
-     * Enrôlement : dernier doigt ou dernière carte non reconnu(e) scanné(e) depuis l'ouverture de la fenêtre de capture.
-     * Le lecteur envoie le numéro qu'il a attribué ; il suffit de le reporter dans la fiche.
+     * Suppression définitive : seulement pour une fiche sans aucun paiement
+     * (doublon, erreur de saisie). Un client qui a payé reste dans l'historique de caisse : on le masque.
      */
-    public function capture(Request $request): JsonResponse
+    public function supprimerDefinitivement(int $id): RedirectResponse
     {
-        $data = $request->validate([
-            'type' => ['required', Rule::in(['empreinte', 'carte'])],
-            'depuis' => ['required', 'integer'],
-        ]);
+        $client = Client::withTrashed()->findOrFail($id);
 
-        $passage = Passage::where('motif', $data['type'] === 'carte' ? 'carte_inconnue' : 'empreinte_inconnue')
-            ->where('passe_le', '>=', \Illuminate\Support\Carbon::createFromTimestamp($data['depuis'])->subSeconds(2))
-            ->latest('passe_le')
-            ->latest('id')
-            ->first();
+        if ($client->paiements()->exists()) {
+            return back()->with('erreur', "{$client->nom_complet} a des paiements enregistrés : on ne peut pas l'effacer sans fausser la caisse. Masquez-le à la place.");
+        }
 
-        $colonne = $data['type'] === 'carte' ? 'carte_id' : 'empreinte_id';
-        $dejaPris = $passage && Client::withTrashed()->where($colonne, $passage->empreinte_id)->exists();
+        if ($client->empreinte_id) {
+            $this->pointeuse->retirer($client->empreinte_id);
+        }
+        if ($client->photo_path) {
+            Storage::disk('public')->delete($client->photo_path);
+        }
 
-        return response()->json([
-            'identifiant' => $passage && ! $dejaPris ? $passage->empreinte_id : null,
-            'deja_attribue' => $dejaPris,
-        ]);
+        $nom = $client->nom_complet;
+        $client->forceDelete();
+        Log::notice('Client supprimé définitivement', ['client' => $id, 'par' => auth()->id()]);
+
+        return redirect()->route('clients.index')->with('succes', "{$nom} a été supprimé(e) définitivement.");
     }
 
-    /** Estimation simple du risque de départ, pour prioriser les relances. */
-    private function risque(Client $client, $finDroits, int $venues14): array
+    private function stockerPhoto(UploadedFile $photo): string
     {
-        if ($client->type !== Client::TYPE_ABONNE) {
-            return ['niveau' => '—', 'classe' => 'info', 'raison' => 'Client journalier'];
-        }
-        if (! $finDroits && ! $client->abonnementActif()) {
-            return ['niveau' => 'Parti', 'classe' => 'ko', 'raison' => 'Plus d’abonnement en cours'];
-        }
-        if ($venues14 === 0) {
-            return ['niveau' => 'Élevé', 'classe' => 'ko', 'raison' => 'Aucune venue depuis 14 jours'];
-        }
-        if ($venues14 <= 2 || ($finDroits && today()->diffInDays($finDroits, false) <= 7)) {
-            return ['niveau' => 'Moyen', 'classe' => 'warn', 'raison' => $venues14 <= 2 ? 'Vient rarement' : 'Échéance proche'];
-        }
-
-        return ['niveau' => 'Faible', 'classe' => 'ok', 'raison' => 'Vient régulièrement'];
-    }
-
-    /** Frise unique : entrées, paiements, messages, gels, mesures. */
-    private function timeline(Client $client, $passages, $messages)
-    {
-        $ev = collect();
-
-        foreach ($passages as $p) {
-            $ev->push(['date' => $p->passe_le, 'classe' => $p->estAutorise() ? 'in' : 'ko',
-                'titre' => $p->estAutorise() ? 'Entrée · '.(\App\Models\Passage::METHODES[$p->methode] ?? $p->methode) : 'Refusé · '.$p->message(), 'detail' => null]);
-        }
-        foreach ($client->paiements as $pa) {
-            $ev->push(['date' => $pa->created_at, 'classe' => $pa->estAnnule() ? 'ko' : 'pay',
-                'titre' => ($pa->estAnnule() ? 'Annulé · ' : '').$pa->objet().' · '.number_format($pa->montant, 0, ',', ' ').' F',
-                'detail' => ($pa->caisse?->nom ?? '').' · '.(\App\Models\Paiement::MODES[$pa->mode] ?? $pa->mode), 'recu' => $pa]);
-        }
-        foreach ($messages as $m) {
-            $ev->push(['date' => $m->envoye_le ?? $m->created_at, 'classe' => 'msg',
-                'titre' => 'Message '.(Message::TYPES[$m->type] ?? $m->type).' · '.['a_envoyer' => 'à envoyer', 'envoye' => 'envoyé', 'ignore' => 'ignoré', 'echec' => 'échec'][$m->statut], 'detail' => null]);
-        }
-        foreach ($client->gels as $g) {
-            $ev->push(['date' => $g->created_at, 'classe' => 'gel', 'titre' => "Gel {$g->du->format('d/m')} → {$g->au->format('d/m')} ({$g->jours} j)", 'detail' => $g->motif]);
-        }
-
-        return $ev->sortByDesc('date')->take(25)->values();
+        // Nom aléatoire + extension déduite du contenu réel (jamais du nom fourni)
+        return $photo->storeAs('clients', bin2hex(random_bytes(20)).'.'.$photo->extension(), 'public');
     }
 
     private function valider(Request $request, ?Client $client = null): array
@@ -314,28 +213,21 @@ class ClientController extends Controller
             'type' => ['required', Rule::in(array_keys(Client::TYPES))],
             'nom' => ['required', 'string', 'max:100'],
             'prenoms' => ['nullable', 'string', 'max:150'],
-            'telephone' => ['nullable', 'string', 'max:20', Rule::unique('clients', 'telephone')->ignore($client?->id)],
+            'telephone' => ['nullable', 'string', 'regex:/^[0-9+() .-]{6,20}$/', Rule::unique('clients', 'telephone')->ignore($client?->id)],
             'email' => ['nullable', 'email', 'max:150'],
-            'date_naissance' => ['nullable', 'date', 'before:today'],
+            'date_adhesion' => ['nullable', 'date', 'after:2000-01-01', 'before_or_equal:'.today()->addYear()->toDateString()],
             'sexe' => ['nullable', Rule::in(['M', 'F'])],
-            'empreinte_id' => ['nullable', 'string', 'max:64', Rule::unique('clients', 'empreinte_id')->ignore($client?->id)],
-            'carte_id' => ['nullable', 'string', 'max:64', Rule::unique('clients', 'carte_id')->ignore($client?->id)],
-            'parrain_telephone' => ['nullable', 'string', 'max:20'],
+            'empreinte_id' => ['nullable', 'string', Empreinte::REGLE_CLIENT, Rule::unique('clients', 'empreinte_id')->ignore($client?->id)],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'photo' => ['nullable', 'image', 'max:2048'],
+            'photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'mimetypes:image/jpeg,image/png,image/webp', 'max:2048', 'dimensions:max_width=4000,max_height=4000'],
+        ], [
+            'empreinte_id.unique' => 'Ce n° de pointeuse est déjà attribué à un autre client.',
+            'telephone.unique' => 'Ce numéro de téléphone est déjà enregistré.',
+            'telephone.regex' => 'Le numéro de téléphone n\'est pas valide.',
+            'empreinte_id.regex' => 'Le n° de pointeuse est un nombre entier (ex. 12), inférieur à 900000000 (plage réservée au personnel).',
         ]);
 
-        if (! empty($data['parrain_telephone'])) {
-            $parrain = Client::where('telephone', $data['parrain_telephone'])->where('id', '!=', $client?->id)->first();
-            if (! $parrain) {
-                throw ValidationException::withMessages(['parrain_telephone' => 'Aucun client avec ce numéro : vérifiez le téléphone du parrain.']);
-            }
-            $data['parrain_id'] = $parrain->id;
-        } elseif ($request->has('parrain_telephone')) {
-            $data['parrain_id'] = null;
-        }
-
-        unset($data['photo'], $data['parrain_telephone']);
+        unset($data['photo']);
 
         return $data;
     }

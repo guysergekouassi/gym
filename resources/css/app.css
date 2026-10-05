@@ -1,9 +1,105 @@
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+@source '../views';
+@source '../js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+    /* Couleur de marque : vert de la page de connexion */
+    --color-brand-50: #e9f8f1;
+    --color-brand-100: #c8efdc;
+    --color-brand-200: #96dfbd;
+    --color-brand-300: #5ecb97;
+    --color-brand-400: #2db679;
+    --color-brand-500: #16a36a;
+    --color-brand-600: #128a5a;
+    --color-brand-700: #0f6f49;
+    --color-brand-800: #0d583b;
+    --color-brand-900: #0a4430;
+
+    /* Bleu nuit (fond de la connexion, barre latérale) */
+    --color-ink-950: #071426;
+    --color-ink-900: #0b1d36;
+    --color-ink-800: #12294a;
+    --color-ink-700: #1b3760;
+
+    /* Séries des graphiques (palette validée daltonisme) */
+    --color-serie-1: #0f9960;
+    --color-serie-2: #2563eb;
+    --color-serie-3: #d97706;
+    --color-serie-4: #9333ea;
+}
+
+@layer base {
+    html { -webkit-font-smoothing: antialiased; }
+    body { @apply bg-[#f3f6fa] text-slate-800; }
+    [x-cloak], [hidden] { display: none !important; }
+    :focus-visible { @apply outline-2 outline-offset-2 outline-brand-500; }
+}
+
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
+        disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer; }
+@utility btn-primary { @apply btn bg-brand-500 text-white shadow-sm shadow-brand-500/30 hover:bg-brand-600; }
+@utility btn-dark { @apply btn bg-ink-900 text-white hover:bg-ink-800; }
+@utility btn-success { @apply btn bg-emerald-600 text-white hover:bg-emerald-700; }
+@utility btn-light { @apply btn bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50; }
+@utility btn-danger { @apply btn bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100; }
+@utility btn-lg { @apply px-5 py-3.5 text-base; }
+@utility btn-sm { @apply px-3 py-1.5 text-xs rounded-lg; }
+@utility pill { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold; }
+@utility pill-green { @apply pill bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20; }
+@utility pill-red { @apply pill bg-red-50 text-red-700 ring-1 ring-red-600/20; }
+@utility pill-amber { @apply pill bg-amber-50 text-amber-700 ring-1 ring-amber-600/20; }
+@utility pill-blue { @apply pill bg-sky-50 text-sky-700 ring-1 ring-sky-600/20; }
+@utility pill-gray { @apply pill bg-slate-100 text-slate-600 ring-1 ring-slate-500/20; }
+@utility pill-brand { @apply pill bg-brand-50 text-brand-700 ring-1 ring-brand-600/20; }
+
+@layer components {
+    .card { @apply rounded-2xl bg-white shadow-[0_1px_3px_rgba(15,35,64,0.06),0_8px_24px_-12px_rgba(15,35,64,0.12)] ring-1 ring-slate-900/[0.04]; }
+    .card-header { @apply flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4; }
+    .card-title { @apply text-base font-semibold text-slate-900; }
+    .card-body { @apply p-5; }
+    .label { @apply mb-1.5 block text-sm font-medium text-slate-700; }
+    .input { @apply block w-full rounded-xl border-0 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm ring-1 ring-slate-200
+        placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500 focus:outline-none; }
+    .hint { @apply mt-1 text-xs text-slate-500; }
+    .table { @apply w-full text-left text-sm; }
+    .table thead th { @apply bg-slate-50/80 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500; }
+    .table tbody td { @apply border-t border-slate-100 px-4 py-3 align-middle; }
+    .table tbody tr { @apply hover:bg-slate-50/70; }
+    .link { @apply font-medium text-brand-600 hover:text-brand-700 hover:underline; }
+    .nav-link { @apply flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white; }
+    .nav-link.active { @apply bg-brand-500 text-white shadow-lg shadow-brand-900/40; }
+    .nav-section { @apply mt-5 mb-1.5 px-3.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500; }
+    .choice { @apply relative flex cursor-pointer flex-col rounded-xl bg-white p-3.5 ring-1 ring-slate-200 transition hover:ring-brand-300; }
+    .choice:has(input:checked) { @apply bg-brand-50 ring-2 ring-brand-500; }
+    .choice input { @apply sr-only; }
+}
+
+/* Icône ronde colorée des cartes de chiffres (maquette) */
+@layer components {
+    .pastille { @apply inline-flex size-12 shrink-0 items-center justify-center rounded-full; }
+    .tendance-hausse { @apply inline-flex items-center gap-1 text-xs font-semibold text-emerald-600; }
+    .tendance-stable { @apply inline-flex items-center gap-1 text-xs font-semibold text-slate-500; }
+    .tendance-baisse { @apply inline-flex items-center gap-1 text-xs font-semibold text-red-600; }
+}
+
+/* Barre de défilement discrète : fine, visible seulement au survol */
+@layer components {
+    .defilement-discret { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+    .defilement-discret:hover { scrollbar-color: rgb(255 255 255 / 0.18) transparent; }
+    .defilement-discret::-webkit-scrollbar { width: 6px; }
+    .defilement-discret::-webkit-scrollbar-track { background: transparent; }
+    .defilement-discret::-webkit-scrollbar-thumb { background: transparent; border-radius: 9999px; }
+    .defilement-discret:hover::-webkit-scrollbar-thumb { background: rgb(255 255 255 / 0.18); }
+    .defilement-discret::-webkit-scrollbar-thumb:hover { background: rgb(255 255 255 / 0.32); }
+}
+
+/* Défilement fin des listes déroulantes claires */
+@layer components {
+    .defilement-clair { scrollbar-width: thin; scrollbar-color: rgb(15 35 64 / 0.18) transparent; }
+    .defilement-clair::-webkit-scrollbar { width: 6px; }
+    .defilement-clair::-webkit-scrollbar-thumb { background: rgb(15 35 64 / 0.18); border-radius: 9999px; }
 }

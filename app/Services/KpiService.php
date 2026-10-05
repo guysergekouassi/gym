@@ -3,136 +3,45 @@
 namespace App\Services;
 
 use App\Models\Abonnement;
-use App\Models\Caisse;
 use App\Models\Client;
-use App\Models\Formule;
 use App\Models\Paiement;
 use App\Models\Passage;
 use Carbon\CarbonInterface;
+use App\Models\Formule;
+use App\Models\User;
+use App\Support\Periode;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 class KpiService
 {
-    /** Chiffres du jour : entrées, refus, recettes, affluence par heure (toutes salles ou une seule). */
-    public function resumeJour(?int $salleId = null): array
+    /** Chiffres du jour : entrées, refus, recettes, affluence par heure. */
+    public function resumeJour(): array
     {
         $jour = today()->toDateString();
 
-        $passages = Passage::whereDate('passe_le', $jour)
-            ->when($salleId, fn ($q) => $q->where('salle_id', $salleId))
-            ->get(['statut', 'passe_le']);
-        $paiements = Paiement::valides()->with('user:id,name')->whereDate('created_at', $jour)
-            ->when($salleId, fn ($q) => $q->whereHas('caisse', fn ($c) => $c->where('salle_id', $salleId)))
-            ->get();
+        $passages = Passage::whereDate('passe_le', $jour)->get(['statut', 'sens', 'passe_le'])
+            ->reject(fn ($p) => in_array($p->sens, [Passage::SENS_DEPART, Passage::SENS_DEJA], true));
+        $paiements = Paiement::with('user:id,name')->valides()->whereDate('created_at', $jour)->get();
 
         $affluence = array_fill(0, 24, 0);
         foreach ($passages->where('statut', Passage::STATUT_AUTORISE) as $passage) {
             $affluence[(int) $passage->passe_le->format('G')]++;
         }
 
-        $paiements->load('caisse:id,nom');
-
         return [
             'entrees' => $passages->where('statut', Passage::STATUT_AUTORISE)->count(),
             'refus' => $passages->where('statut', Passage::STATUT_REFUSE)->count(),
-            'journaliers' => $paiements->where('type', Paiement::TYPE_JOURNALIER)->count(),
             'recette_journaliers' => $paiements->where('type', Paiement::TYPE_JOURNALIER)->sum('montant'),
             'recette_abonnements' => $paiements->where('type', Paiement::TYPE_ABONNEMENT)->sum('montant'),
-            'recette_ventes' => $paiements->whereIn('type', [Paiement::TYPE_VENTE, Paiement::TYPE_COACHING])->sum('montant'),
             'recette_par_caissier' => $paiements->groupBy('user_id')->map(fn (Collection $groupe) => [
                 'nom' => $groupe->first()->user?->name ?? '—',
                 'nombre' => $groupe->count(),
                 'total' => $groupe->sum('montant'),
             ])->values(),
-            'recette_par_caisse' => $paiements->groupBy('caisse_id')->map(fn (Collection $groupe) => [
-                'nom' => $groupe->first()->caisse?->nom ?? 'Sans caisse',
-                'nombre' => $groupe->count(),
-                'total' => $groupe->sum('montant'),
-            ])->sortByDesc('total')->values(),
-            'recette_par_mode' => $paiements->groupBy('mode')
-                ->map(fn (Collection $groupe) => $groupe->sum('montant'))
-                ->sortDesc(),
+            'recette_par_mode' => $paiements->groupBy('mode')->map->sum('montant')->sortDesc(),
             'affluence' => $affluence,
-            'heure_pointe' => max($affluence) > 0 ? array_search(max($affluence), $affluence, true) : null,
         ];
-    }
-
-    /**
-     * Encaissements d'une caisse sur une journée : ce que la caissière doit remettre à la clôture.
-     */
-    public function resumeCaisse(Caisse $caisse, ?CarbonInterface $jour = null): array
-    {
-        $tous = Paiement::with(['client', 'user:id,name', 'abonnement.formule', 'lignes', 'pack.formule', 'annulePar:id,name'])
-            ->where('caisse_id', $caisse->id)
-            ->whereDate('created_at', ($jour ?? today())->toDateString())
-            ->latest()
-            ->latest('id')
-            ->get();
-
-        $paiements = $tous->reject->estAnnule()->values();
-        $especes = $paiements->whereIn('mode', Paiement::MODES_ESPECES);
-
-        return [
-            'tous' => $tous,
-            'annules' => $tous->filter->estAnnule()->values(),
-            'cloture' => $caisse->clotures()->with('user:id,name')->whereDate('jour', ($jour ?? today())->toDateString())->first(),
-            'ventes' => $paiements->whereIn('type', [Paiement::TYPE_VENTE, Paiement::TYPE_COACHING])->count(),
-            'paiements' => $paiements,
-            'total' => $paiements->sum('montant'),
-            'nombre' => $paiements->count(),
-            'journaliers' => $paiements->where('type', Paiement::TYPE_JOURNALIER)->count(),
-            'abonnements' => $paiements->where('type', Paiement::TYPE_ABONNEMENT)->count(),
-            'especes' => $especes->sum('montant'),
-            'electronique' => $paiements->sum('montant') - $especes->sum('montant'),
-            'par_mode' => $paiements->groupBy('mode')->map(fn (Collection $g) => $g->sum('montant'))->sortDesc(),
-            'par_caissier' => $paiements->groupBy('user_id')->map(fn (Collection $g) => [
-                'nom' => $g->first()->user?->name ?? '—',
-                'nombre' => $g->count(),
-                'total' => $g->sum('montant'),
-            ])->values(),
-        ];
-    }
-
-    /** Derniers pointages, pour le fil « en direct » du tableau de bord. */
-    public function derniersPassages(int $nombre = 7): Collection
-    {
-        return Passage::with('client')->latest('passe_le')->latest('id')->limit($nombre)->get();
-    }
-
-    /** Nombre d'abonnements en cours par formule. */
-    public function repartitionFormules(): Collection
-    {
-        return Formule::withCount(['abonnements as en_cours' => fn ($q) => $q->enCours()])
-            ->orderBy('duree_jours')
-            ->get();
-    }
-
-    /**
-     * Accès refusés aujourd'hui qui n'ont pas encore été réglés :
-     * pas d'entrée ni de paiement ensuite, ou empreinte toujours inconnue.
-     */
-    public function refusARegulariser(): Collection
-    {
-        $refus = Passage::with('client')
-            ->where('statut', Passage::STATUT_REFUSE)
-            ->whereDate('passe_le', today()->toDateString())
-            ->latest('passe_le')
-            ->get()
-            ->unique(fn (Passage $p) => $p->client_id ? "c{$p->client_id}" : "e{$p->empreinte_id}");
-
-        return $refus->reject(function (Passage $passage) {
-            if (! $passage->client_id) {
-                return Client::where('empreinte_id', $passage->empreinte_id)->exists();
-            }
-
-            return Passage::where('client_id', $passage->client_id)
-                ->where('statut', Passage::STATUT_AUTORISE)
-                ->where('passe_le', '>', $passage->passe_le)
-                ->exists()
-                || Paiement::valides()->where('client_id', $passage->client_id)
-                    ->where('created_at', '>=', $passage->passe_le)
-                    ->exists();
-        })->values();
     }
 
     public function nombreAbonnementsEnCours(): int
@@ -149,7 +58,7 @@ class KpiService
             ->whereHas('abonnements', fn ($q) => $q->enCours())
             ->whereHas('passages', fn ($q) => $q->where('statut', Passage::STATUT_AUTORISE)->where('passe_le', '>=', $depuis))
             ->withCount(['passages as passages_30j' => fn ($q) => $q
-                ->where('statut', Passage::STATUT_AUTORISE)
+                ->venues()
                 ->where('passe_le', '>=', now()->subDays(30))])
             ->withMax(['passages as dernier_passage_le' => fn ($q) => $q->where('statut', Passage::STATUT_AUTORISE)], 'passe_le')
             ->orderByDesc('passages_30j')
@@ -249,94 +158,179 @@ class KpiService
             ->get();
     }
 
-    /* ---------- Rapports avancés ---------- */
-
-    /** Recettes des N derniers mois, par type de vente. */
-    public function revenusParMois(int $mois = 12): Collection
+    /**
+     * Recettes des N derniers jours, séparées abonnements / passages.
+     * Avec $caissier : uniquement ses encaissements.
+     *
+     * @return list<array{jour: CarbonImmutable, abonnement: int, journalier: int}>
+     */
+    public function recettesParJour(int $jours = 7, ?User $caissier = null): array
     {
-        $debut = today()->startOfMonth()->subMonths($mois - 1);
-        $paiements = Paiement::valides()->where('created_at', '>=', $debut)->get(['created_at', 'montant', 'type']);
+        $debut = CarbonImmutable::today()->subDays($jours - 1);
 
-        return collect(range(0, $mois - 1))->map(function ($i) use ($debut, $paiements) {
-            $m = $debut->copy()->addMonths($i);
-            $duMois = $paiements->filter(fn ($p) => $p->created_at->format('Y-m') === $m->format('Y-m'));
+        $paiements = Paiement::valides()
+            ->where('created_at', '>=', $debut)
+            ->when($caissier, fn ($q) => $q->where('user_id', $caissier->id))
+            ->get(['type', 'montant', 'created_at']);
+
+        return collect(range(0, $jours - 1))->map(function (int $i) use ($debut, $paiements) {
+            $jour = $debut->addDays($i);
+            $duJour = $paiements->filter(fn ($p) => $p->created_at->isSameDay($jour));
 
             return [
-                'mois' => $m,
-                'total' => $duMois->sum('montant'),
-                'abonnements' => $duMois->where('type', Paiement::TYPE_ABONNEMENT)->sum('montant'),
-                'journaliers' => $duMois->where('type', Paiement::TYPE_JOURNALIER)->sum('montant'),
-                'autres' => $duMois->whereIn('type', [Paiement::TYPE_VENTE, Paiement::TYPE_COACHING])->sum('montant'),
+                'jour' => $jour,
+                'abonnement' => (int) $duJour->where('type', Paiement::TYPE_ABONNEMENT)->sum('montant'),
+                'journalier' => (int) $duJour->where('type', Paiement::TYPE_JOURNALIER)->sum('montant'),
             ];
-        });
+        })->all();
     }
 
-    /** Ce que les échéances des 30 prochains jours devraient rapporter, au taux de renouvellement observé. */
-    public function revenuPrevu(): array
+    /** Variation en % entre deux valeurs (null si la référence est nulle). */
+    public static function variation(int|float $actuel, int|float $reference): ?float
     {
-        $echeances = $this->expirantDans(30);
-        $potentiel = $echeances->sum(fn (Abonnement $a) => $a->formule->prix);
-        $taux = $this->renouvellement(today()->subDays(90), today())['taux'];
+        return $reference > 0 ? round(100 * ($actuel - $reference) / $reference) : null;
+    }
+
+    /** Chiffres d'un jour pour la caisse (un caissier, ou toute la salle). */
+    public function chiffresCaisse(CarbonInterface $jour, ?User $caissier = null, ?CarbonInterface $jusqua = null): array
+    {
+        $bornes = [$jour->copy()->startOfDay(), $jusqua ?? $jour->copy()->endOfDay()];
+        $paiements = Paiement::valides()
+            ->whereBetween('created_at', $bornes)
+            ->when($caissier, fn ($q) => $q->where('user_id', $caissier->id))
+            ->with('abonnement:id,est_renouvellement')
+            ->get();
+
+        $abonnements = $paiements->where('type', Paiement::TYPE_ABONNEMENT);
 
         return [
-            'echeances' => $echeances->count(),
-            'potentiel' => $potentiel,
-            'taux' => $taux,
-            'prevu' => $taux !== null ? (int) round($potentiel * $taux / 100) : null,
+            'recette' => (int) $paiements->sum('montant'),
+            'tickets' => $paiements->count(),
+            'passages_vendus' => (int) $paiements->where('type', Paiement::TYPE_JOURNALIER)->sum('quantite'),
+            'abonnements' => $abonnements->filter(fn ($p) => ! $p->abonnement?->est_renouvellement)->count(),
+            'renouvellements' => $abonnements->filter(fn ($p) => $p->abonnement?->est_renouvellement)->count(),
+            'entrees' => Passage::whereBetween('passe_le', $bornes)->venues()->count(),
         ];
     }
 
-    /** Abonnements à la durée qui finissent dans N jours, sans suite déjà payée. */
-    public function expirantDans(int $jours): Collection
+    /**
+     * Chiffres clés d'une période. $jusqua coupe la période à un instant précis :
+     * on compare ainsi « aujourd'hui jusqu'à 17 h » à « hier jusqu'à 17 h », et non à toute la journée d'hier.
+     */
+    public function chiffresPeriode(Periode $p, ?CarbonInterface $jusqua = null): array
     {
-        return Abonnement::with(['client', 'formule'])->duree()->enCours()
-            ->whereDate('date_fin', '<=', today()->addDays($jours)->toDateString())
-            ->whereNotExists(function ($q) {
-                $q->selectRaw('1')->from('abonnements as suivant')
-                    ->whereColumn('suivant.client_id', 'abonnements.client_id')
-                    ->whereColumn('suivant.date_debut', '>', 'abonnements.date_fin')
-                    ->where('suivant.statut', Abonnement::STATUT_ACTIF);
-            })
-            ->get();
+        $fin = $p->au->endOfDay();
+        $bornes = [$p->du->startOfDay(), $jusqua ? $fin->min($jusqua) : $fin];
+        $paiements = Paiement::valides()->whereBetween('created_at', $bornes)->get(['montant']);
+
+        return [
+            'clients_inscrits' => Client::whereBetween('created_at', $bornes)->count(),
+            'recette' => (int) $paiements->sum('montant'),
+            'tickets' => $paiements->count(),
+            'entrees' => Passage::whereBetween('passe_le', $bornes)->venues()->count(),
+            'abonnements_actifs' => Client::abonnes()
+                ->whereHas('abonnements', fn ($q) => $q->enCours($p->dateReference()))->count(),
+        ];
     }
 
-    /** Pour chaque mois d'inscription : nombre de nouveaux abonnés et part encore abonnée aujourd'hui. */
-    public function cohortes(int $mois = 6): Collection
+    /**
+     * Recettes de la période, abonnements et passages séparés.
+     * Un jour choisi → les 7 jours qui finissent ce jour-là ; jusqu'à 62 jours → par jour ; au-delà → par mois.
+     *
+     * @return array{etiquettes: list<string>, abonnement: list<int>, journalier: list<int>, titre: string}
+     */
+    public function serieRecettes(Periode $p): array
     {
-        $premiers = Abonnement::where('statut', Abonnement::STATUT_ACTIF)
-            ->selectRaw('client_id, MIN(date_debut) as debut')
-            ->groupBy('client_id')
-            ->get()
-            ->map(fn ($l) => ['client_id' => $l->client_id, 'mois' => substr((string) $l->debut, 0, 7)]);
+        $du = $p->granularite === 'jour' ? $p->du->subDays(6) : $p->du;
+        $au = $p->au;
+        $parMois = $du->diffInDays($au) > 62;
 
-        $actifs = Abonnement::enCours()->pluck('client_id')->unique()->flip();
+        $paiements = Paiement::valides()
+            ->whereBetween('created_at', [$du->startOfDay(), $au->endOfDay()])
+            ->get(['type', 'montant', 'created_at']);
 
-        return collect(range($mois - 1, 0))->map(function ($i) use ($premiers, $actifs) {
-            $m = today()->startOfMonth()->subMonths($i);
-            $cohorte = $premiers->where('mois', $m->format('Y-m'));
-            $restent = $cohorte->filter(fn ($l) => $actifs->has($l['client_id']))->count();
-
-            return [
-                'mois' => $m,
-                'inscrits' => $cohorte->count(),
-                'restent' => $restent,
-                'retention' => $cohorte->count() ? (int) round(100 * $restent / $cohorte->count()) : null,
+        $cases = [];
+        for ($d = $parMois ? $du->startOfMonth() : $du; $d->lte($au); $d = $parMois ? $d->addMonthNoOverflow() : $d->addDay()) {
+            $cle = $d->format($parMois ? 'Y-m' : 'Y-m-d');
+            $cases[$cle] = [
+                'etiquette' => $parMois ? mb_substr(Periode::MOIS[$d->month], 0, 4).($du->year !== $au->year ? ' '.$d->format('y') : '') : $d->format('d/m'),
+                Paiement::TYPE_ABONNEMENT => 0,
+                Paiement::TYPE_JOURNALIER => 0,
             ];
-        });
+        }
+
+        foreach ($paiements as $paiement) {
+            $cle = $paiement->created_at->format($parMois ? 'Y-m' : 'Y-m-d');
+            if (isset($cases[$cle][$paiement->type])) {
+                $cases[$cle][$paiement->type] += $paiement->montant;
+            }
+        }
+
+        return [
+            'etiquettes' => array_values(array_column($cases, 'etiquette')),
+            'abonnement' => array_values(array_column($cases, Paiement::TYPE_ABONNEMENT)),
+            'journalier' => array_values(array_column($cases, Paiement::TYPE_JOURNALIER)),
+            'titre' => $p->granularite === 'jour' ? '7 derniers jours' : ($parMois ? 'par mois' : 'par jour'),
+        ];
     }
 
-    /** Affluence moyenne par jour de semaine et par heure sur 4 semaines (pour repérer les heures creuses). */
-    public function carteAffluence(int $jours = 28): array
+    /**
+     * Répartition des clients (comme la maquette) : les deux formules les plus suivies,
+     * les clients de passage, puis « Autres » (autres formules, abonnements expirés).
+     *
+     * @return list<array{libelle: string, valeur: int}>
+     */
+    public function repartitionClients(?CarbonInterface $date = null): array
     {
-        $carte = array_fill(1, 7, array_fill(0, 24, 0));
-        Passage::where('statut', Passage::STATUT_AUTORISE)
-            ->where('passe_le', '>=', today()->subDays($jours))
-            ->get(['passe_le'])
-            ->each(function ($p) use (&$carte) {
-                $carte[(int) $p->passe_le->isoWeekday()][(int) $p->passe_le->format('G')]++;
-            });
+        $date ??= today();
+        $total = Client::count();
 
-        $semaines = max(1, intdiv($jours, 7));
+        $parFormule = Abonnement::enCours($date)
+            ->join('formules', 'formules.id', '=', 'abonnements.formule_id')
+            ->whereIn('abonnements.client_id', Client::abonnes()->select('id'))
+            ->selectRaw('formules.nom as nom, COUNT(DISTINCT abonnements.client_id) as clients')
+            ->groupBy('formules.nom')
+            ->orderByDesc('clients')
+            ->get();
 
-        return array_map(fn ($heures) => array_map(fn ($n) => round($n / $semaines, 1), $heures), $carte);
-    }}
+        $parts = $parFormule->take(2)
+            ->map(fn ($f) => ['libelle' => 'Abonnements '.mb_strtolower($f->nom), 'valeur' => (int) $f->clients])
+            ->values()->all();
+
+        $abonnesDesFormulesPrincipales = array_sum(array_column($parts, 'valeur'));
+        $passages = Client::journaliers()->count();
+        $parts[] = ['libelle' => 'Passages', 'valeur' => $passages];
+        $parts[] = ['libelle' => 'Autres', 'valeur' => max(0, $total - $passages - $abonnesDesFormulesPrincipales)];
+
+        return $parts;
+    }
+
+    /** Formules les plus suivies (abonnements en cours à la date). */
+    public function topFormules(int $limite = 5, ?CarbonInterface $date = null): Collection
+    {
+        return Formule::withCount(['abonnements as en_cours' => fn ($q) => $q->enCours($date)])
+            ->orderByDesc('en_cours')->orderBy('duree_jours')
+            ->limit($limite)->get();
+    }
+
+    /** Dernières actions dans la salle : nouveaux clients, abonnements, tickets. */
+    public function activiteRecente(int $limite = 6): Collection
+    {
+        $clients = Client::latest('id')->limit($limite)->get()->map(fn (Client $c) => [
+            'quand' => $c->created_at, 'type' => 'client', 'titre' => 'Nouveau client', 'detail' => $c->nom_complet, 'client' => $c,
+        ]);
+
+        $paiements = Paiement::valides()->with(['client', 'abonnement.formule'])->latest('id')->limit($limite)->get()
+            ->map(fn (Paiement $p) => [
+                'quand' => $p->created_at,
+                'type' => $p->abonnement ? ($p->abonnement->est_renouvellement ? 'renouvellement' : 'abonnement') : 'passage',
+                'titre' => $p->abonnement
+                    ? ($p->abonnement->est_renouvellement ? 'Renouvellement' : 'Abonnement').' '.$p->abonnement->formule->nom
+                    : 'Ticket passage'.($p->quantite > 1 ? ' × '.$p->quantite : ''),
+                'detail' => $p->client?->nom_complet ?? 'Client anonyme',
+                'client' => $p->client,
+            ]);
+
+        return $clients->concat($paiements)->sortByDesc('quand')->take($limite)->values();
+    }
+}

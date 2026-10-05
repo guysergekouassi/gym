@@ -3,53 +3,45 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Auth\Events\PasswordReset;
+use App\Support\Sessions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Password as RegleMotDePasse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
-/** Mot de passe oublié : lien de réinitialisation envoyé par e-mail. */
 class MotDePasseController extends Controller
 {
-    public function demande(): View
+    public function edit(Request $request): View
     {
-        return view('auth.mot-de-passe-oublie');
+        return view('auth.mot-de-passe', ['force' => $request->user()->doit_changer_mdp]);
     }
 
-    public function envoyer(Request $request): RedirectResponse
+    public function update(Request $request): RedirectResponse
     {
-        $request->validate(['email' => ['required', 'email']]);
-
-        Password::sendResetLink($request->only('email'));
-
-        // Même réponse que le compte existe ou non (on ne révèle pas les adresses)
-        return back()->with('succes', "Si un compte existe pour cette adresse, un lien de réinitialisation vient d'être envoyé.");
-    }
-
-    public function formulaire(Request $request, string $token): View
-    {
-        return view('auth.reinitialiser', ['token' => $token, 'email' => $request->string('email')->value()]);
-    }
-
-    public function reinitialiser(Request $request): RedirectResponse
-    {
-        $request->validate([
-            'token' => ['required'],
-            'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', RegleMotDePasse::min(8)],
+        $data = $request->validate([
+            'current_password' => ['required', 'string', 'current_password'],
+            'password' => ['required', 'string', 'max:200', 'confirmed', Password::defaults()],
         ]);
 
-        $statut = Password::reset($request->only('email', 'password', 'password_confirmation', 'token'), function (User $user, string $password) {
-            $user->forceFill(['password' => $password, 'remember_token' => Str::random(60)])->save();
-            event(new PasswordReset($user));
-        });
+        $user = $request->user();
 
-        return $statut === Password::PASSWORD_RESET
-            ? redirect()->route('login')->with('succes', 'Mot de passe modifié. Vous pouvez vous connecter.')
-            : back()->withErrors(['email' => 'Ce lien n’est plus valable. Refaites une demande.'])->onlyInput('email');
+        if (Hash::check($data['password'], $user->password)) {
+            throw ValidationException::withMessages(['password' => 'Le nouveau mot de passe doit être différent de l\'actuel.']);
+        }
+
+        $user->forceFill([
+            'password' => $data['password'],
+            'doit_changer_mdp' => false,
+        ])->save();
+
+        // Les autres sessions ouvertes avec l'ancien mot de passe sont fermées
+        Sessions::revoquer($user, $request->session()->getId());
+        $request->session()->regenerate();
+        Auth::setUser($user);
+
+        return redirect('/')->with('succes', 'Mot de passe modifié.');
     }
 }

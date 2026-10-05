@@ -9,53 +9,30 @@ class Passage extends Model
 {
     public const METHODE_EMPREINTE = 'empreinte';
     public const METHODE_CAISSE = 'caisse';
-    public const METHODE_CARTE = 'carte';
-
-    public const METHODES = [
-        self::METHODE_EMPREINTE => 'Empreinte',
-        self::METHODE_CARTE => 'Carte / QR',
-        self::METHODE_CAISSE => 'Caisse',
-    ];
 
     public const STATUT_AUTORISE = 'autorise';
     public const STATUT_REFUSE = 'refuse';
 
+    /** 1er badge du jour = arrivée, 2e = départ, les suivants = séance déjà enregistrée. */
+    public const SENS_ENTREE = 'entree';
+    public const SENS_DEPART = 'depart';
+    public const SENS_DEJA = 'deja';
+
     public const MOTIFS = [
         'empreinte_inconnue' => 'Empreinte non reconnue',
-        'carte_inconnue' => 'Carte ou code non reconnu',
         'abonnement_expire' => 'Abonnement expiré ou inexistant',
-        'abonnement_gele' => 'Abonnement gelé',
-        'carnet_epuise' => 'Carnet d’entrées épuisé',
         'paiement_requis' => 'Paiement journalier requis à la caisse',
+        'refus_pointeuse' => 'Accès refusé par la pointeuse',
     ];
 
     protected $fillable = [
-        'client_id', 'lecteur_id', 'user_id', 'paiement_id', 'salle_id',
-        'methode', 'statut', 'motif', 'empreinte_id', 'passe_le', 'sorti_le',
+        'client_id', 'lecteur_id', 'user_id', 'paiement_id',
+        'methode', 'statut', 'sens', 'motif', 'empreinte_id', 'passe_le',
     ];
 
     protected function casts(): array
     {
-        return [
-            'passe_le'  => 'datetime',
-            'sorti_le'  => 'datetime',
-        ];
-    }
-
-    /** Vrai si ce passage est une sortie (le client a re-scanné après son entrée). */
-    public function estSortie(): bool
-    {
-        return $this->sorti_le !== null;
-    }
-
-    /** Durée passée dans la salle en minutes (null si pas encore sorti). */
-    public function dureeMinutes(): ?int
-    {
-        if (! $this->sorti_le) {
-            return null;
-        }
-
-        return (int) $this->passe_le->diffInMinutes($this->sorti_le);
+        return ['passe_le' => 'datetime'];
     }
 
     public function client(): BelongsTo
@@ -68,11 +45,6 @@ class Passage extends Model
         return $this->belongsTo(Lecteur::class);
     }
 
-    public function salle(): BelongsTo
-    {
-        return $this->belongsTo(Salle::class);
-    }
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -83,25 +55,26 @@ class Passage extends Model
         return $this->belongsTo(Paiement::class);
     }
 
+    /** Venues : passages autorisés hors départs et badges en trop (un membre = une venue par jour). */
+    public function scopeVenues(\Illuminate\Database\Eloquent\Builder $q): void
+    {
+        $q->where('statut', self::STATUT_AUTORISE)
+            ->where(fn ($w) => $w->whereNull('sens')->orWhere('sens', self::SENS_ENTREE));
+    }
+
     public function estAutorise(): bool
     {
         return $this->statut === self::STATUT_AUTORISE;
     }
 
-    /** Libellé du moyen d'identification : « Empreinte n° 12 », « Carte 0012… », « Caisse ». */
-    public function identification(): string
-    {
-        return match ($this->methode) {
-            self::METHODE_CAISSE => 'Caisse',
-            self::METHODE_CARTE => 'Carte '.$this->empreinte_id,
-            default => 'Empreinte n° '.($this->empreinte_id ?? '—'),
-        };
-    }
-
     public function message(): string
     {
         if ($this->estAutorise()) {
-            return $this->estSortie() ? 'Bonne journée !' : 'Bienvenue';
+            return match ($this->sens) {
+                self::SENS_DEPART => 'À bientôt',
+                self::SENS_DEJA => 'Déjà enregistré',
+                default => 'Bienvenue',
+            };
         }
 
         return self::MOTIFS[$this->motif] ?? 'Accès refusé';

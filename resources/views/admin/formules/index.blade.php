@@ -1,49 +1,71 @@
 @extends('layouts.app')
-@section('title', 'Formules')
+@section('title', 'Formules & tarifs')
 
-@php
-    use App\Models\Formule;
-    use App\Support\Fcfa;
-@endphp
+@php use App\Support\Fcfa; @endphp
 
 @section('content')
-<div class="top">
-    <div><div class="eyebrow">Ce que la salle vend : abonnements, carnets d'entrées, packs de coaching</div><h1>Formules et promos</h1></div>
-    <div class="actions">
-        <a href="{{ route('admin.promos.index') }}" class="btn ghost">@include('partials.icone', ['nom' => 'etiquette'])Codes promo</a>
-        <a href="{{ route('admin.formules.create') }}" class="btn">@include('partials.icone', ['nom' => 'plus'])Nouvelle formule</a>
-    </div>
-</div>
+<x-page-header title="Formules & tarifs" subtitle="Les prix modifiés s'appliquent aux prochaines ventes uniquement ; les abonnements déjà vendus ne changent pas."/>
 
-@if((int) config('salle.frais_inscription') > 0)
-    <p class="hint-card" style="margin:0">Frais d'inscription ajoutés au premier abonnement : <strong>{{ Fcfa::format((int) config('salle.frais_inscription')) }}</strong> (réglage <code>SALLE_FRAIS_INSCRIPTION</code> dans le fichier .env).</p>
-@else
-    <p class="hint-card" style="margin:0">Aucun frais d'inscription. Pour en ajouter, renseignez <code>SALLE_FRAIS_INSCRIPTION=5000</code> dans le fichier .env.</p>
-@endif
-
-@foreach(Formule::TYPES as $type => $libelle)
-    <section class="grid" style="gap:10px">
-        <h2 style="font-size:18px">{{ $libelle }}</h2>
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Formule</th><th>Catégorie</th><th>Contenu</th><th class="r">Prix</th><th class="r">En cours</th><th>Statut</th><th><span class="sr">Actions</span></th></tr></thead>
-                <tbody>
-                @forelse($formules->get($type, collect()) as $formule)
-                    <tr>
-                        <td><span class="name">{{ $formule->nom }}</span>@if($formule->description)<div class="meta">{{ $formule->description }}</div>@endif</td>
-                        <td>{{ $formule->categorie ?? '—' }}</td>
-                        <td>{{ $formule->resume() }}</td>
-                        <td class="r"><span class="num" style="font-size:18px">{{ Fcfa::format($formule->prix) }}</span></td>
-                        <td class="r">{{ $type === Formule::TYPE_COACHING ? '—' : $formule->en_cours }}</td>
-                        <td><span class="tag {{ $formule->actif ? 'ok' : 'off' }}">{{ $formule->actif ? 'En vente' : 'Retirée' }}</span></td>
-                        <td class="r"><a href="{{ route('admin.formules.edit', $formule) }}" class="pill-btn">Modifier</a></td>
-                    </tr>
+<div class="grid gap-6 lg:grid-cols-3">
+    <div class="space-y-6 lg:col-span-2">
+        <div class="card overflow-hidden">
+            <div class="card-header"><h2 class="card-title">Abonnements</h2></div>
+            <div class="divide-y divide-slate-100">
+                @forelse($formules as $formule)
+                    <form method="POST" action="{{ route('admin.formules.update', $formule) }}" class="grid items-end gap-3 px-5 py-4 sm:grid-cols-12 {{ $formule->actif ? '' : 'bg-slate-50' }}">
+                        @csrf @method('PUT')
+                        <div class="sm:col-span-4">
+                            <label class="label text-xs">Nom</label>
+                            <input name="nom" value="{{ $formule->nom }}" required maxlength="100" class="input">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="label text-xs">Durée (jours)</label>
+                            <input type="number" name="duree_jours" value="{{ $formule->duree_jours }}" min="1" max="730" required class="input">
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="label text-xs">Prix (FCFA)</label>
+                            <input type="number" name="prix" value="{{ $formule->prix }}" min="0" max="10000000" step="500" required class="input">
+                        </div>
+                        <label class="flex items-center gap-2 pb-2.5 text-sm sm:col-span-1">
+                            <input type="checkbox" name="actif" value="1" @checked($formule->actif) class="size-4 accent-brand-500"> Active
+                        </label>
+                        <div class="sm:col-span-2">
+                            <button type="submit" class="btn-light w-full">Enregistrer</button>
+                        </div>
+                        <p class="flex items-center justify-between gap-3 text-xs text-slate-500 sm:col-span-12"><span>{{ $formule->abonnes_en_cours }} abonnement(s) en cours sur cette formule{{ $formule->actif ? '' : ' · formule masquée à la caisse' }}</span>
+                            <button type="submit" form="supprimer-formule-{{ $formule->id }}" class="font-semibold text-red-600 hover:underline">Supprimer</button></p>
+                    </form>
+                    <form id="supprimer-formule-{{ $formule->id }}" method="POST" action="{{ route('admin.formules.destroy', $formule) }}" data-confirm="Supprimer la formule « {{ $formule->nom }} » ? (Refusé si elle a déjà été vendue.)" hidden>@csrf @method('DELETE')</form>
                 @empty
-                    <tr><td colspan="7" class="muted">Aucune formule de ce type.</td></tr>
+                    <p class="px-5 py-8 text-center text-sm text-slate-400">Aucune formule.</p>
                 @endforelse
-                </tbody>
-            </table>
+            </div>
         </div>
-    </section>
-@endforeach
+
+        <form method="POST" action="{{ route('admin.formules.store') }}" class="card">
+            @csrf
+            <div class="card-header"><h2 class="card-title">Nouvelle formule</h2></div>
+            <div class="card-body grid items-end gap-3 sm:grid-cols-12">
+                <div class="sm:col-span-5"><label class="label text-xs" for="n-nom">Nom</label><input id="n-nom" name="nom" required maxlength="100" class="input" placeholder="ex. Premium mensuel"></div>
+                <div class="sm:col-span-2"><label class="label text-xs" for="n-duree">Durée (jours)</label><input id="n-duree" type="number" name="duree_jours" min="1" max="730" required class="input" placeholder="30"></div>
+                <div class="sm:col-span-3"><label class="label text-xs" for="n-prix">Prix (FCFA)</label><input id="n-prix" type="number" name="prix" min="0" max="10000000" step="500" required class="input" placeholder="15000"></div>
+                <div class="sm:col-span-2"><button type="submit" class="btn-primary w-full"><x-icon name="plus" class="size-4"/> Ajouter</button></div>
+            </div>
+        </form>
+    </div>
+
+    <form method="POST" action="{{ route('admin.formules.tarif') }}" class="card h-fit">
+        @csrf @method('PUT')
+        <div class="card-header"><h2 class="card-title flex items-center gap-2"><x-icon name="bolt" class="size-5 text-brand-500"/> Passage journalier</h2></div>
+        <div class="card-body space-y-4">
+            <p class="text-sm text-slate-600">Prix d'une séance à l'unité. La caissière ne peut pas le modifier : il est appliqué automatiquement.</p>
+            <div>
+                <label for="tarif_journalier" class="label">Tarif (FCFA)</label>
+                <input id="tarif_journalier" type="number" name="tarif_journalier" value="{{ $tarifJournalier }}" min="0" max="1000000" step="100" required class="input text-lg font-bold">
+            </div>
+            <button type="submit" class="btn-primary w-full">Mettre à jour</button>
+            <p class="text-center text-xs text-slate-500">Actuel : {{ Fcfa::format($tarifJournalier) }}</p>
+        </div>
+    </form>
+</div>
 @endsection

@@ -23,7 +23,7 @@ class RecuService
             throw new RuntimeException('Le package mike42/escpos-php n\'est pas installé.');
         }
 
-        $paiement->loadMissing(['client', 'user', 'caisse', 'abonnement.formule']);
+        $paiement->loadMissing(['client', 'user', 'abonnement.formule']);
         $config = config('salle.impression');
 
         $connecteur = match ($config['connecteur']) {
@@ -47,6 +47,9 @@ class RecuService
             if (config('salle.telephone')) {
                 $imprimante->text('Tel : '.$t(config('salle.telephone'))."\n");
             }
+            if (config('salle.email')) {
+                $imprimante->text($t(config('salle.email'))."\n");
+            }
             $imprimante->text(str_repeat('-', 42)."\n");
 
             $imprimante->setJustification(Printer::JUSTIFY_LEFT);
@@ -56,7 +59,7 @@ class RecuService
 
             $libelle = $paiement->abonnement
                 ? 'Abonnement '.$paiement->abonnement->formule->nom
-                : 'Entree journaliere';
+                : 'Entree journaliere'.($paiement->quantite > 1 ? ' x '.$paiement->quantite : '');
             $imprimante->text('Objet    : '.$t($libelle)."\n");
 
             if ($paiement->abonnement) {
@@ -74,9 +77,8 @@ class RecuService
             $imprimante->setTextSize(2, 2);
             $imprimante->text($t(Fcfa::format($paiement->montant))."\n");
             $imprimante->setTextSize(1, 1);
-            $imprimante->text('Caisse : '.$t($paiement->caisse?->nom ?? '-')."\n");
-            $imprimante->text('Caissiere : '.$t($paiement->user?->name)."\n\n");
-            $imprimante->text("Merci et bonne seance !\n");
+            $imprimante->text('Caisse : '.$t($paiement->user?->name)."\n\n");
+            $imprimante->text($t(config('salle.message_recu') ?: 'Merci et bonne seance !')."\n");
             $imprimante->feed(3);
             $imprimante->cut();
         } finally {
