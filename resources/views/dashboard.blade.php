@@ -29,12 +29,16 @@
 </div>
 
 {{-- Chiffres clés de la période choisie --}}
-<div class="mb-5 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 2xl:gap-5">
+<div class="mb-5 grid gap-4 sm:grid-cols-2 md:grid-cols-3 {{ $caMois ? 'xl:grid-cols-6' : 'lg:grid-cols-5' }} 2xl:gap-5">
     <x-kpi label="Clients inscrits" :value="$chiffres['clients_inscrits']" icon="users" tone="green"
            :variation="KpiService::variation($chiffres['clients_inscrits'], $avant['clients_inscrits'])" :reference="$ref" :comparable="true"
            :hint="$clientsTotal.' clients au total'"/>
-    <x-kpi :label="'Revenus '.$suffixe" :value="Fcfa::format($chiffres['recette'])" icon="cash" tone="purple"
+    <x-kpi :label="'Chiffre d\'affaires '.$suffixe" :value="Fcfa::format($chiffres['recette'])" icon="cash" tone="purple"
            :variation="KpiService::variation($chiffres['recette'], $avant['recette'])" :reference="$ref" :comparable="true"/>
+    @if($caMois)
+        <x-kpi :label="$caMois['libelle']" :value="Fcfa::format($caMois['montant'])" icon="chart" tone="blue"
+               :variation="KpiService::variation($caMois['montant'], $caMois['precedent'])" :reference="$caMois['reference']" :comparable="true"/>
+    @endif
     <x-kpi label="Abonnements actifs" :value="$chiffres['abonnements_actifs']" icon="calendar" tone="blue"
            :variation="KpiService::variation($chiffres['abonnements_actifs'], $avant['abonnements_actifs'])" :reference="$ref" :comparable="true"/>
     <x-kpi :label="'Entrées '.$suffixe" :value="$chiffres['entrees']" icon="user" tone="orange"

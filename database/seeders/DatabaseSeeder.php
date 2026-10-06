@@ -28,18 +28,38 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Mots de passe provisoires : changement obligatoire à la première connexion.
-        // Tarifs d'exemple, à adapter depuis le menu « Formules & tarifs »
+        // Grille du Gymnase EPIKAÏZO, modifiable depuis le menu « Formules & tarifs »
+        // [nom, prix, séances par jour (null = illimité), avantages]
+        $serviettes = "2 serviettes offertes pendant la durée de l'abonnement";
         $formules = [
-            ['Mensuel', 30, 15000],
-            ['Trimestriel', 90, 40000],
-            ['Semestriel', 180, 75000],
-            ['Annuel', 365, 140000],
+            ['Passe mensuelle Simple', 25000, 1, [
+                "1 serviette offerte pendant la durée de l'abonnement",
+            ]],
+            ['Passe mensuelle Illimitée', 40000, null, [
+                $serviettes,
+                '2 séances de coaching individuel par mois + suivi collectif',
+            ]],
+            ['Passe mensuelle Généreux', 50000, null, [
+                '5 parrainages gratuits par mois',
+                'Parrainage : 1 personne par jour à moitié prix',
+                "1 bidon d'eau offert à chaque séance",
+                $serviettes,
+                '3 séances de coaching individuel par mois + suivi collectif + bilan mensuel',
+            ]],
+            ['Passe mensuelle Privilège', 60000, null, [
+                'Parrainage illimité : 1 invité gratuit chaque jour',
+                "1 bidon d'eau offert à chaque séance",
+                $serviettes,
+                '4 séances de coaching individuel par mois + suivi collectif + bilan mensuel',
+            ]],
         ];
 
-        foreach ($formules as [$nom, $duree, $prix]) {
+        foreach ($formules as [$nom, $prix, $seancesParJour, $avantages]) {
             Formule::firstOrCreate(['nom' => $nom], [
-                'duree_jours' => $duree,
+                'duree_jours' => 30,
                 'prix' => $prix,
+                'seances_par_jour' => $seancesParJour,
+                'description' => implode("\n", $avantages),
                 'actif' => true,
             ]);
         }

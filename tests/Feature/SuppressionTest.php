@@ -56,7 +56,7 @@ class SuppressionTest extends TestCase
     public function test_supprimer_formule_compte_et_pointeuse(): void
     {
         $neuve = Formule::create(['nom' => 'Essai', 'duree_jours' => 7, 'prix' => 5000, 'actif' => true]);
-        $vendue = Formule::where('nom', 'Mensuel')->firstOrFail();
+        $vendue = Formule::where('nom', 'Passe mensuelle Illimitée')->firstOrFail();
         $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'A']);
         $this->actingAs($this->caissiere)->post('/caisse/abonnement', ['client_id' => $client->id, 'formule_id' => $vendue->id, 'mode' => 'especes']);
         $this->delete("/admin/formules/{$neuve->id}")->assertForbidden();
@@ -97,7 +97,7 @@ class SuppressionTest extends TestCase
         ]);
         $pointeuse = Lecteur::where('adresse_ip', '192.168.50.64')->firstOrFail();
         $client = Client::create(['nom' => 'Test', 'type' => Client::TYPE_ABONNE, 'empreinte_id' => '1']);
-        $this->actingAs($this->caissiere)->post('/caisse/abonnement', ['client_id' => $client->id, 'formule_id' => Formule::value('id'), 'mode' => 'especes']);
+        $this->actingAs($this->caissiere)->post('/caisse/abonnement', ['client_id' => $client->id, 'formule_id' => Formule::where('nom', 'Passe mensuelle Illimitée')->value('id'), 'mode' => 'especes']);
         $this->post('/caisse/journalier', ['mode' => 'especes']);
         $this->assertSame(2, Paiement::count());
 

@@ -106,6 +106,34 @@ class CaisseService
     }
 
     /**
+     * Carnet Fidélité : séances payées d'avance au tarif fidélité, décomptées une par une
+     * à chaque arrivée du client à la pointeuse (aucune date limite).
+     */
+    public function vendreCarnet(Client $client, int $seances, array $data, User $caissier): Paiement
+    {
+        $paiement = DB::transaction(function () use ($client, $seances, $data, $caissier) {
+            $paiement = Paiement::create([
+                'client_id' => $client->id,
+                'user_id' => $caissier->id,
+                'type' => Paiement::TYPE_CARNET,
+                'montant' => Parametre::tarifFidelite() * $seances,
+                'quantite' => $seances,
+                'mode' => $data['mode'],
+                'reference' => $data['reference'] ?? null,
+            ]);
+
+            $this->numeroter($paiement);
+
+            return $paiement;
+        });
+
+        // La pointeuse laisse entrer le client tant qu'il lui reste des séances
+        $this->pointeuse->ajouterOuModifier($client);
+
+        return $paiement;
+    }
+
+    /**
      * Annule un encaissement (erreur de caisse). Rien n'est supprimé : le paiement
      * reste visible, barré, avec l'auteur, la date et le motif de l'annulation.
      */

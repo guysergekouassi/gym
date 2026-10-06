@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
+    <x-icones-app/>
     <title>@yield('code') · {{ config('salle.nom') }}</title>
     @vite(['resources/css/app.css'])
 </head>

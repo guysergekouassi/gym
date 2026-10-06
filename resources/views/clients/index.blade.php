@@ -160,10 +160,38 @@
                     <p class="hint">Enregistrez ensuite le doigt sur la pointeuse avec ce même n°.</p>
                 </div>
                 <x-champ-photo id="m-photo"/>
-                <label class="flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-sm text-brand-800">
-                    <input type="checkbox" name="abonner" value="1" @checked(old('abonner', request('nouveau') ? true : false)) class="size-4 accent-brand-500">
-                    Ouvrir la caisse pour l'abonner juste après
-                </label>
+
+                {{-- Abonnement immédiat (visible seulement pour type Abonné) --}}
+                <div id="m-bloc-abonnement" style="display: {{ old('type', 'abonne') === Client::TYPE_ABONNE ? 'block' : 'none' }}">
+                    <p class="text-sm font-semibold text-slate-900 mb-2">Abonnement immédiat <span class="font-normal opacity-50">(optionnel)</span></p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="label" for="m-formule">Formule</label>
+                            <select id="m-formule" name="formule_id" class="input">
+                                <option value="">— Choisir une formule —</option>
+                                @foreach($formules as $formule)
+                                    <option value="{{ $formule->id }}"
+                                            data-prix="{{ number_format($formule->prix, 0, ',', ' ') }}"
+                                            data-resume="{{ $formule->resume() }}"
+                                            @selected(old('formule_id') == $formule->id)>
+                                        {{ $formule->nom }} — {{ number_format($formule->prix, 0, ',', ' ') }} FCFA
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div id="m-bloc-paiement" style="display: {{ old('formule_id') ? 'block' : 'none' }}" class="space-y-3">
+                            <div>
+                                <label class="label" for="m-reference">Référence <span class="opacity-50">(optionnel)</span></label>
+                                <input id="m-reference" type="text" name="reference" maxlength="100"
+                                       value="{{ old('reference') }}" class="input" placeholder="ex. Wave #123456">
+                            </div>
+                            <div id="m-apercu" class="rounded-lg bg-brand-50 border border-brand-100 px-4 py-3 text-sm hidden">
+                                <div class="font-semibold text-brand-800" id="m-apercu-nom"></div>
+                                <div class="text-brand-600 text-xs mt-0.5" id="m-apercu-detail"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4">
@@ -172,4 +200,42 @@
         </div>
     </form>
 </dialog>
+
+@push('scripts')
+<script>
+(function () {
+    const mType       = document.getElementById('m-type');
+    const mBloc       = document.getElementById('m-bloc-abonnement');
+    const mFormule    = document.getElementById('m-formule');
+    const mBlocPmt    = document.getElementById('m-bloc-paiement');
+    const mApercu     = document.getElementById('m-apercu');
+    const mApercuNom  = document.getElementById('m-apercu-nom');
+    const mApercuDet  = document.getElementById('m-apercu-detail');
+
+    if (mType) {
+        mType.addEventListener('change', () => {
+            const estAbonne = mType.value === '{{ Client::TYPE_ABONNE }}';
+            mBloc.style.display = estAbonne ? 'block' : 'none';
+            if (!estAbonne) { mFormule.value = ''; mBlocPmt.style.display = 'none'; }
+        });
+    }
+
+    if (mFormule) {
+        mFormule.addEventListener('change', () => {
+            const opt = mFormule.selectedOptions[0];
+            if (opt && opt.value) {
+                mBlocPmt.style.display = 'block';
+                mApercuNom.textContent = opt.text.split('—')[0].trim();
+                mApercuDet.textContent = opt.dataset.resume + ' · ' + opt.dataset.prix + ' FCFA';
+                mApercu.classList.remove('hidden');
+            } else {
+                mBlocPmt.style.display = 'none';
+                mApercu.classList.add('hidden');
+            }
+        });
+        if (mFormule.value) mFormule.dispatchEvent(new Event('change'));
+    }
+})();
+</script>
+@endpush
 @endsection

@@ -19,6 +19,8 @@ class FormuleController extends Controller
             'formules' => Formule::withCount(['abonnements as abonnes_en_cours' => fn ($q) => $q->enCours()])
                 ->orderByDesc('actif')->orderBy('duree_jours')->get(),
             'tarifJournalier' => Parametre::tarifJournalier(),
+            'tarifFidelite' => Parametre::tarifFidelite(),
+            'carnetMin' => (int) config('salle.carnet_min_seances'),
         ]);
     }
 
@@ -56,19 +58,31 @@ class FormuleController extends Controller
     {
         $data = $request->validate([
             'tarif_journalier' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'tarif_fidelite' => ['sometimes', 'required', 'integer', 'min:0', 'max:1000000'],
         ]);
 
         Parametre::definir(Parametre::TARIF_JOURNALIER, $data['tarif_journalier']);
+        if (isset($data['tarif_fidelite'])) {
+            Parametre::definir(Parametre::TARIF_FIDELITE, $data['tarif_fidelite']);
+        }
 
-        return back()->with('succes', 'Tarif du passage journalier mis à jour.');
+        return back()->with('succes', 'Tarifs des séances mis à jour.');
     }
 
     private function valider(Request $request, ?Formule $formule = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'nom' => ['required', 'string', 'max:100', Rule::unique('formules', 'nom')->ignore($formule?->id)],
             'duree_jours' => ['required', 'integer', 'min:1', 'max:730'],
             'prix' => ['required', 'integer', 'min:0', 'max:10000000'],
+            'seances_par_jour' => ['nullable', 'integer', 'in:1'],
+            'description' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        // Champ vide = accès illimité / aucun avantage
+        $data['seances_par_jour'] = $data['seances_par_jour'] ?? null;
+        $data['description'] = trim((string) ($data['description'] ?? '')) ?: null;
+
+        return $data;
     }
 }

@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Client;
 use App\Models\CommandePointeuse;
 use App\Models\Lecteur;
-use App\Models\Paiement;
 use App\Models\Passage;
 use App\Services\Hikvision\HikvisionClient;
 use App\Services\Hikvision\PointeuseInjoignable;
@@ -119,7 +118,8 @@ class PointeuseService
 
     /**
      * Période pendant laquelle la pointeuse laisse entrer le membre :
-     * abonné → jusqu'à la fin de ses droits ; journalier → aujourd'hui s'il a payé.
+     * abonné → jusqu'à la fin de ses droits (passe 1 séance/jour : fermé après le départ, jusqu'à demain) ;
+     * carnet Fidélité → tant qu'il reste des séances ; ticket du jour → aujourd'hui.
      * Sans droit : fin hier (la pointeuse le refuse).
      *
      * @return array{0: CarbonImmutable, 1: CarbonImmutable}
@@ -128,18 +128,19 @@ class PointeuseService
     {
         $debut = CarbonImmutable::create(2020, 1, 1);
         $hier = CarbonImmutable::yesterday()->endOfDay();
+        $maintenant = CarbonImmutable::now();
 
-        if ($client->type === Client::TYPE_ABONNE) {
-            $fin = $client->finDesDroits();
-
-            return [$debut, $fin ? CarbonImmutable::instance($fin)->endOfDay() : $hier];
+        if ($client->type === Client::TYPE_ABONNE && ($fin = $client->finDesDroits())) {
+            return [$debut, $client->seanceDuJourFaite($maintenant) ? $hier : CarbonImmutable::instance($fin)->endOfDay()];
         }
 
-        $aPaye = $client->paiements()->valides()
-            ->where('type', Paiement::TYPE_JOURNALIER)
-            ->whereDate('created_at', today()->toDateString())
-            ->exists();
+        // Le carnet est décompté à chaque arrivée ; une fois vide, la pointeuse est remise à jour
+        if ($client->seancesCarnet() > 0) {
+            return [$debut, CarbonImmutable::today()->addYear()->endOfDay()];
+        }
 
-        return [$debut, $aPaye ? CarbonImmutable::today()->endOfDay() : $hier];
+        $aujourdhui = $client->aPayeJournalierLe($maintenant) || $client->carnetUtiliseLe($maintenant);
+
+        return [$debut, $aujourdhui ? CarbonImmutable::today()->endOfDay() : $hier];
     }
 }

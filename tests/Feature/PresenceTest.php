@@ -31,7 +31,7 @@ class PresenceTest extends TestCase
 
         $this->membre = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Meledje', 'prenoms' => 'Agnimel', 'empreinte_id' => '1']);
         Abonnement::create([
-            'client_id' => $this->membre->id, 'formule_id' => Formule::value('id'), 'date_debut' => today(),
+            'client_id' => $this->membre->id, 'formule_id' => Formule::where('nom', 'Passe mensuelle Illimitée')->value('id'), 'date_debut' => today(),
             'date_fin' => today()->addDays(29), 'montant' => 15000, 'statut' => Abonnement::STATUT_ACTIF,
         ]);
     }

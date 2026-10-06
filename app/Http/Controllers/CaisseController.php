@@ -40,12 +40,18 @@ class CaisseController extends Controller
         return view('caisse.index', [
             'formules' => Formule::where('actif', true)->orderBy('duree_jours')->get(),
             'tarifJournalier' => Parametre::tarifJournalier(),
+            'tarifFidelite' => Parametre::tarifFidelite(),
+            'carnetMin' => (int) config('salle.carnet_min_seances'),
             'paiements' => $paiementsJour->take(20),
             'totalJour' => $valides->sum('montant'),
             'nombreJour' => $valides->count(),
             'parMode' => $valides->groupBy('mode')->map->sum('montant')->sortDesc(),
-            'onglet' => $request->integer('client_id') ? 'abonnement'
-                : (in_array($request->query('onglet'), ['abonnement', 'renouvellement'], true) ? $request->query('onglet') : 'passage'),
+            'onglet' => match (true) {
+                $request->integer('client_id') > 0 => 'abonnement',
+                $request->old('seances') !== null => 'carnet', // retour après une erreur de saisie du carnet
+                in_array($request->query('onglet'), ['abonnement', 'carnet', 'renouvellement'], true) => $request->query('onglet'),
+                default => 'passage',
+            },
             'aRenouveler' => $this->aRenouveler(),
             'clientPreselectionne' => $request->integer('client_id')
                 ? Client::find($request->integer('client_id'))
@@ -88,6 +94,30 @@ class CaisseController extends Controller
         );
 
         return $this->apresPaiement($paiement, 'Abonnement enregistré.');
+    }
+
+    /** Carnet Fidélité : au moins 5 séances payées d'avance, pour un client qui a son n° d'empreinte. */
+    public function carnet(Request $request): RedirectResponse
+    {
+        $minimum = (int) config('salle.carnet_min_seances');
+        $data = $request->validate([
+            'client_id' => ['required', 'integer', Rule::exists('clients', 'id')->whereNull('deleted_at')],
+            'seances' => ['required', 'integer', "min:{$minimum}", 'max:100'],
+            'mode' => ['required', Rule::in(array_keys(Paiement::MODES))],
+            'reference' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9 ._\/-]*$/'],
+        ], [
+            'client_id.required' => 'Choisissez le client (recherche par nom ou téléphone).',
+            'seances.min' => "Le carnet Fidélité compte au moins {$minimum} séances.",
+        ]);
+
+        $client = Client::findOrFail($data['client_id']);
+        if (! $client->empreinte_id) {
+            return back()->withInput()->withErrors(['client_id' => "{$client->nom_complet} n'a pas de n° d'empreinte : attribuez-lui un numéro (Clients → Modifier) pour qu'il puisse badger."]);
+        }
+
+        $paiement = $this->caisse->vendreCarnet($client, (int) $data['seances'], $data, $request->user());
+
+        return $this->apresPaiement($paiement, "Carnet Fidélité de {$data['seances']} séances enregistré.");
     }
 
     /**

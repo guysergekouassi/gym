@@ -6,7 +6,6 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Abonnement extends Model
@@ -15,8 +14,8 @@ class Abonnement extends Model
     public const STATUT_ANNULE = 'annule';
 
     protected $fillable = [
-        'client_id', 'formule_id', 'date_debut', 'date_fin', 'montant', 'entrees_restantes',
-        'remise', 'frais_inscription', 'code_promo_id', 'statut', 'est_renouvellement', 'user_id',
+        'client_id', 'formule_id', 'date_debut', 'date_fin', 'montant',
+        'statut', 'est_renouvellement', 'user_id',
     ];
 
     protected function casts(): array
@@ -25,9 +24,6 @@ class Abonnement extends Model
             'date_debut' => 'date',
             'date_fin' => 'date',
             'montant' => 'integer',
-            'entrees_restantes' => 'integer',
-            'remise' => 'integer',
-            'frais_inscription' => 'integer',
             'est_renouvellement' => 'boolean',
         ];
     }
@@ -47,19 +43,9 @@ class Abonnement extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function codePromo(): BelongsTo
-    {
-        return $this->belongsTo(CodePromo::class);
-    }
-
     public function paiement(): HasOne
     {
         return $this->hasOne(Paiement::class);
-    }
-
-    public function gels(): HasMany
-    {
-        return $this->hasMany(Gel::class);
     }
 
     /** Abonnements valides à une date donnée (aujourd'hui par défaut). */
@@ -70,17 +56,6 @@ class Abonnement extends Model
         $query->where('statut', self::STATUT_ACTIF)
             ->whereDate('date_debut', '<=', $jour)
             ->whereDate('date_fin', '>=', $jour);
-    }
-
-    /** Abonnements à la durée (hors carnets d'entrées). */
-    public function scopeDuree(Builder $query): void
-    {
-        $query->whereNull('entrees_restantes');
-    }
-
-    public function estCarnet(): bool
-    {
-        return $this->entrees_restantes !== null;
     }
 
     public function joursRestants(): int

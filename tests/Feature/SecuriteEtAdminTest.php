@@ -110,7 +110,7 @@ class SecuriteEtAdminTest extends TestCase
     {
         $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Konan', 'empreinte_id' => '42']);
         $this->actingAs($this->caissiere)->post('/caisse/abonnement', [
-            'client_id' => $client->id, 'formule_id' => Formule::where('nom', 'Mensuel')->value('id'), 'mode' => 'especes',
+            'client_id' => $client->id, 'formule_id' => Formule::where('nom', 'Passe mensuelle Illimitée')->value('id'), 'mode' => 'especes',
         ]);
         $paiement = Paiement::firstOrFail();
 
@@ -141,7 +141,7 @@ class SecuriteEtAdminTest extends TestCase
             ->assertOk()->assertJson(['autorise' => false, 'message' => 'Abonnement expiré ou inexistant']);
 
         Abonnement::create([
-            'client_id' => $client->id, 'formule_id' => Formule::value('id'), 'date_debut' => today(),
+            'client_id' => $client->id, 'formule_id' => Formule::where('nom', 'Passe mensuelle Illimitée')->value('id'), 'date_debut' => today(),
             'date_fin' => today()->addDays(29), 'montant' => 1, 'statut' => Abonnement::STATUT_ACTIF,
         ]);
 
@@ -250,7 +250,7 @@ class SecuriteEtAdminTest extends TestCase
 
         $this->post('/clients', ['type' => Client::TYPE_ABONNE, 'nom' => 'Nouveau', 'empreinte_id' => '77'])->assertSessionHasNoErrors();
         $this->actingAs($this->caissiere)->post('/caisse/abonnement', [
-            'client_id' => $client->id, 'formule_id' => Formule::value('id'), 'mode' => 'especes',
+            'client_id' => $client->id, 'formule_id' => Formule::where('nom', 'Passe mensuelle Illimitée')->value('id'), 'mode' => 'especes',
         ])->assertSessionHasErrors('client_id');
     }
 

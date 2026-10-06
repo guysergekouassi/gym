@@ -23,6 +23,9 @@
                 @elseif($client->type === Client::TYPE_ABONNE)
                     <span class="pill-red">Abonnement expiré</span>
                 @endif
+                @if(($seancesCarnet = $client->seancesCarnet()) > 0)
+                    <span class="pill-amber">Carnet Fidélité : {{ $seancesCarnet }} séance(s) restante(s)</span>
+                @endif
                 <span class="pill-gray"><x-icon name="fingerprint" class="size-3.5"/> {{ $client->empreinte_id ? 'Empreinte n°'.$client->empreinte_id : 'Empreinte non enregistrée' }}</span>
                 @if($client->telephone)<span class="text-slate-500">{{ $client->telephone }}</span>@endif
                 @if($client->date_adhesion)<span class="text-slate-500">· Membre depuis le {{ $client->date_adhesion->format('d/m/Y') }}</span>@endif

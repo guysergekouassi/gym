@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Client;
 use App\Models\CommandePointeuse;
 use App\Models\Lecteur;
+use App\Models\Parametre;
 use Illuminate\Support\Str;
 
 /**
@@ -14,6 +15,9 @@ use Illuminate\Support\Str;
  */
 class SynchroPointeuseService
 {
+    /** Dernier jour où les accès « 1 séance par jour » ont été rouverts (réglage interne). */
+    private const CLE_JOUR = 'pointeuse_journee';
+
     public function ajouterOuModifier(Client $client): void
     {
         if (! $client->empreinte_id) {
@@ -42,6 +46,26 @@ class SynchroPointeuseService
         });
 
         return $nombre;
+    }
+
+    /**
+     * Au changement de jour, rouvre l'accès des passes « 1 séance par jour » fermé la veille
+     * après le départ. Appelé à chaque tour du programme d'écoute ; travaille une fois par jour.
+     */
+    public function nouvelleJournee(): int
+    {
+        $jour = today()->toDateString();
+        if (Parametre::valeur(self::CLE_JOUR) === $jour) {
+            return 0;
+        }
+
+        $membres = Client::whereNotNull('empreinte_id')
+            ->whereHas('abonnements', fn ($q) => $q->enCours()->whereHas('formule', fn ($f) => $f->where('seances_par_jour', 1)))
+            ->get();
+        $membres->each(fn (Client $c) => $this->ajouterOuModifier($c));
+        Parametre::definir(self::CLE_JOUR, $jour);
+
+        return $membres->count();
     }
 
     /** Nom affiché sur l'écran de la pointeuse : lettres simples, 24 caractères max. */

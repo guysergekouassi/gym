@@ -64,6 +64,8 @@ class AccueilController extends Controller
             ] : null,
             'fin_droits' => $finDroits?->format('d/m/Y'),
             'jours_restants' => $finDroits ? max(0, (int) today()->diffInDays($finDroits, false)) : null,
+            // Carnet Fidélité : séances restantes après ce passage (null si le client n'a jamais eu de carnet)
+            'seances_carnet' => $client && ! $finDroits && $client->carnets()->isNotEmpty() ? $client->seancesCarnet() : null,
         ];
     }
 

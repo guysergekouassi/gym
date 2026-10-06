@@ -107,7 +107,7 @@ class PointeuseTest extends TestCase
     {
         $abonne = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Yao', 'empreinte_id' => '7']);
         Abonnement::create([
-            'client_id' => $abonne->id, 'formule_id' => Formule::value('id'), 'date_debut' => today(),
+            'client_id' => $abonne->id, 'formule_id' => Formule::where('nom', 'Passe mensuelle Illimitée')->value('id'), 'date_debut' => today(),
             'date_fin' => today()->addDays(29), 'montant' => 15000, 'statut' => Abonnement::STATUT_ACTIF,
         ]);
         Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Expiré', 'empreinte_id' => '8']);
@@ -147,7 +147,7 @@ class PointeuseTest extends TestCase
 
         $this->post('/clients', ['type' => Client::TYPE_ABONNE, 'nom' => "Kon\tan", 'prenoms' => 'Aya', 'empreinte_id' => '12'])->assertSessionHasNoErrors();
         $client = Client::where('empreinte_id', '12')->firstOrFail();
-        $this->post('/caisse/abonnement', ['client_id' => $client->id, 'formule_id' => Formule::where('nom', 'Mensuel')->value('id'), 'mode' => 'especes']);
+        $this->post('/caisse/abonnement', ['client_id' => $client->id, 'formule_id' => Formule::where('nom', 'Passe mensuelle Illimitée')->value('id'), 'mode' => 'especes']);
 
         // Une seule demande en attente par membre (la plus récente)
         $this->assertSame(1, CommandePointeuse::where('statut', 'en_attente')->count());

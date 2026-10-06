@@ -17,6 +17,7 @@
     <div class="card mb-6 flex gap-1 p-1.5" role="tablist">
         <button type="button" data-tab="passage" role="tab" class="{{ $ongletClasse }}"><x-icon name="ticket" class="size-5"/> Entrée de passage</button>
         <button type="button" data-tab="abonnement" role="tab" class="{{ $ongletClasse }}"><x-icon name="calendar" class="size-5"/> Abonnement</button>
+        <button type="button" data-tab="carnet" role="tab" class="{{ $ongletClasse }}"><x-icon name="tag" class="size-5"/> Carnet Fidélité</button>
         <button type="button" data-tab="renouvellement" role="tab" class="{{ $ongletClasse }}"><x-icon name="refresh" class="size-5"/> Renouvellement
             @if($aRenouveler->isNotEmpty())<span class="rounded-full bg-orange-500 px-1.5 text-[10px] text-white">{{ $aRenouveler->count() }}</span>@endif
         </button>
@@ -118,8 +119,14 @@
                                        data-prix="{{ Fcfa::format($formule->prix) }}" data-nom="{{ $formule->nom }} ({{ $formule->duree_jours }} jours)"
                                        @checked((int) old('formule_id', $loop->first ? $formule->id : 0) === $formule->id)>
                                 <span class="text-sm font-semibold text-slate-900">{{ $formule->nom }}</span>
-                                <span class="text-xs text-slate-500">{{ $formule->duree_jours }} jours</span>
+                                <span class="text-xs text-slate-500">{{ $formule->resume() }}</span>
                                 <span class="mt-3 whitespace-nowrap text-base font-bold text-brand-600">{{ Fcfa::format($formule->prix) }}</span>
+                                @if($formule->avantages())
+                                    {{-- Ce que la caissière remet au client (serviettes, coaching…) --}}
+                                    <ul class="mt-2 space-y-0.5 text-xs text-slate-500">
+                                        @foreach($formule->avantages() as $avantage)<li>✓ {{ $avantage }}</li>@endforeach
+                                    </ul>
+                                @endif
                             </label>
                         @endforeach
                     </div>
@@ -139,6 +146,60 @@
                     <span class="font-semibold">Total</span><span data-recap-montant class="text-xl font-bold text-slate-900">—</span>
                 </div>
                 <p class="mt-4 text-xs text-slate-500">Renouvellement anticipé : le nouvel abonnement démarre le lendemain de la fin de l'actuel. Aucun jour perdu.</p>
+            </div>
+            @include('caisse._resume')
+        </div>
+    </form>
+
+    {{-- ============ CARNET FIDÉLITÉ ============ --}}
+    <form data-panel="carnet" data-calcul-passage data-prix="{{ $tarifFidelite }}" method="POST" action="{{ route('caisse.carnet') }}" class="grid gap-6 xl:grid-cols-3" hidden>
+        @csrf
+        <div class="card p-6 xl:col-span-2">
+            <h2 class="mb-6 flex items-center gap-3 text-lg font-semibold text-slate-900">
+                <span class="pastille size-9 bg-amber-50 text-amber-600"><x-icon name="tag" class="size-5"/></span> Carnet Fidélité
+            </h2>
+            <div class="space-y-5">
+                <div>
+                    <span class="label">Client *</span>
+                    @include('caisse._recherche', ['requis' => true, 'preselection' => null])
+                    <p class="mt-2 text-xs text-slate-500">Le client doit avoir un n° d'empreinte : chaque arrivée à la pointeuse décompte une séance.</p>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="seances" class="label">Nombre de séances (minimum {{ $carnetMin }})</label>
+                        <div class="flex items-center rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+                            <button type="button" data-quantite-moins class="px-3.5 py-2.5 text-slate-600 hover:text-brand-600" aria-label="Moins"><x-icon name="minus" class="size-4"/></button>
+                            <input id="seances" name="seances" type="number" min="{{ $carnetMin }}" max="100" value="{{ old('seances', $carnetMin) }}" data-quantite
+                                   class="w-full border-0 bg-transparent py-2.5 text-center text-sm font-semibold focus:outline-none">
+                            <button type="button" data-quantite-plus class="px-3.5 py-2.5 text-slate-600 hover:text-brand-600" aria-label="Plus"><x-icon name="plus" class="size-4"/></button>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="label">Prix par séance</span>
+                        <p class="input bg-slate-50">{{ Fcfa::format($tarifFidelite) }}</p>
+                    </div>
+                </div>
+
+                @include('caisse._modes', ['prefixe' => 'c'])
+
+                <div>
+                    <span class="label">Montant total</span>
+                    <p data-total class="input bg-slate-50 py-3 text-lg font-bold">{{ Fcfa::format($tarifFidelite * $carnetMin) }}</p>
+                </div>
+
+                <button type="submit" class="btn-primary btn-lg w-full"><x-icon name="printer" class="size-5"/> Valider le carnet</button>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="card p-6">
+                <h3 class="mb-4 font-semibold text-slate-900">Récapitulatif</h3>
+                <div class="flex justify-between text-sm text-slate-600"><span>Séance Fidélité × <span data-recap-quantite>{{ $carnetMin }}</span></span><span data-total-court>{{ Fcfa::format($tarifFidelite * $carnetMin) }}</span></div>
+                <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
+                    <span class="font-semibold">Total</span><span data-total-court class="text-xl font-bold text-slate-900">{{ Fcfa::format($tarifFidelite * $carnetMin) }}</span>
+                </div>
+                <p class="mt-4 text-xs text-slate-500">Une séance est décomptée à chaque arrivée (le départ ne compte pas). Quand le carnet est vide, la pointeuse refuse le client.</p>
             </div>
             @include('caisse._resume')
         </div>

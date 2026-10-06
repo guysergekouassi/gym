@@ -72,7 +72,7 @@ class GymFlowTest extends TestCase
 
         $this->actingAs($this->admin)->post('/caisse/abonnement', [
             'client_id' => $client->id,
-            'formule_id' => Formule::where('nom', 'Mensuel')->value('id'),
+            'formule_id' => Formule::where('nom', 'Passe mensuelle Illimitée')->value('id'),
             'mode' => 'especes',
         ]);
         $paiement = Paiement::firstOrFail();
@@ -94,7 +94,7 @@ class GymFlowTest extends TestCase
 
         $this->actingAs($this->caissiere)->post('/caisse/abonnement', [
             'client_id' => $client->id,
-            'formule_id' => Formule::where('nom', 'Mensuel')->value('id'),
+            'formule_id' => Formule::where('nom', 'Passe mensuelle Illimitée')->value('id'),
             'mode' => 'wave',
         ])->assertRedirect();
 
@@ -105,7 +105,7 @@ class GymFlowTest extends TestCase
         $this->scanner('7')->assertOk()->assertJson([
             'autorise' => true,
             'client' => ['nom' => 'Yao'],
-            'abonnement' => ['formule' => 'Mensuel', 'jours_restants' => 29],
+            'abonnement' => ['formule' => 'Passe mensuelle Illimitée', 'jours_restants' => 29],
         ]);
 
         // Anti-doublon : un second scan immédiat ne crée pas de passage
@@ -116,7 +116,7 @@ class GymFlowTest extends TestCase
     public function test_renouvellement_anticipe_ne_perd_aucun_jour(): void
     {
         $client = Client::create(['type' => Client::TYPE_ABONNE, 'nom' => 'Koffi']);
-        $mensuel = Formule::where('nom', 'Mensuel')->value('id');
+        $mensuel = Formule::where('nom', 'Passe mensuelle Illimitée')->value('id');
 
         $this->actingAs($this->caissiere);
         $this->post('/caisse/abonnement', ['client_id' => $client->id, 'formule_id' => $mensuel, 'mode' => 'especes']);
@@ -138,7 +138,7 @@ class GymFlowTest extends TestCase
         $this->assertSame(Client::TYPE_JOURNALIER, $paiement->client->type);
         $this->assertDatabaseHas('passages', ['paiement_id' => $paiement->id, 'statut' => 'autorise', 'methode' => 'caisse']);
 
-        $this->get("/recus/{$paiement->numero_recu}")->assertOk()->assertSee($paiement->numero_recu)->assertSee('2 000');
+        $this->get("/recus/{$paiement->numero_recu}")->assertOk()->assertSee($paiement->numero_recu)->assertSee('2 500');
     }
 
     public function test_journalier_enrole_doit_payer_avant_de_scanner(): void
@@ -164,7 +164,7 @@ class GymFlowTest extends TestCase
 
     public function test_kpi_actifs_moins_actifs_et_renouvellements(): void
     {
-        $mensuel = Formule::where('nom', 'Mensuel')->firstOrFail();
+        $mensuel = Formule::where('nom', 'Passe mensuelle Illimitée')->firstOrFail();
         $nouvelAbonnement = fn (Client $c, $debut, bool $renouv = false) => Abonnement::create([
             'client_id' => $c->id, 'formule_id' => $mensuel->id, 'date_debut' => $debut,
             'date_fin' => $debut->copy()->addDays(29), 'montant' => $mensuel->prix,

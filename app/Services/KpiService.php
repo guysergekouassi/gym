@@ -32,7 +32,7 @@ class KpiService
         return [
             'entrees' => $passages->where('statut', Passage::STATUT_AUTORISE)->count(),
             'refus' => $passages->where('statut', Passage::STATUT_REFUSE)->count(),
-            'recette_journaliers' => $paiements->where('type', Paiement::TYPE_JOURNALIER)->sum('montant'),
+            'recette_journaliers' => $paiements->whereIn('type', Paiement::TYPES_PASSAGE)->sum('montant'),
             'recette_abonnements' => $paiements->where('type', Paiement::TYPE_ABONNEMENT)->sum('montant'),
             'recette_par_caissier' => $paiements->groupBy('user_id')->map(fn (Collection $groupe) => [
                 'nom' => $groupe->first()->user?->name ?? '—',
@@ -180,7 +180,7 @@ class KpiService
             return [
                 'jour' => $jour,
                 'abonnement' => (int) $duJour->where('type', Paiement::TYPE_ABONNEMENT)->sum('montant'),
-                'journalier' => (int) $duJour->where('type', Paiement::TYPE_JOURNALIER)->sum('montant'),
+                'journalier' => (int) $duJour->whereIn('type', Paiement::TYPES_PASSAGE)->sum('montant'),
             ];
         })->all();
     }
@@ -206,7 +206,7 @@ class KpiService
         return [
             'recette' => (int) $paiements->sum('montant'),
             'tickets' => $paiements->count(),
-            'passages_vendus' => (int) $paiements->where('type', Paiement::TYPE_JOURNALIER)->sum('quantite'),
+            'passages_vendus' => (int) $paiements->whereIn('type', Paiement::TYPES_PASSAGE)->sum('quantite'),
             'abonnements' => $abonnements->filter(fn ($p) => ! $p->abonnement?->est_renouvellement)->count(),
             'renouvellements' => $abonnements->filter(fn ($p) => $p->abonnement?->est_renouvellement)->count(),
             'entrees' => Passage::whereBetween('passe_le', $bornes)->venues()->count(),
@@ -217,6 +217,39 @@ class KpiService
      * Chiffres clés d'une période. $jusqua coupe la période à un instant précis :
      * on compare ainsi « aujourd'hui jusqu'à 17 h » à « hier jusqu'à 17 h », et non à toute la journée d'hier.
      */
+    /**
+     * Chiffre d'affaires cumulé du mois de la période affichée : du 1er jusqu'à la fin du jour
+     * (ou de la semaine) choisi, sans dépasser maintenant. Comparé au mois précédent au même moment.
+     *
+     * @return array{libelle: string, montant: int, precedent: int, reference: string}
+     */
+    public function chiffreAffairesMois(Periode $p): array
+    {
+        $debut = $p->dateReference()->startOfMonth();
+        $finMois = $debut->endOfMonth();
+        $fin = $p->au->endOfDay()->min(CarbonImmutable::now())->min($finMois);
+        $moisComplet = $fin->eq($finMois);
+
+        // Mois précédent : même temps écoulé depuis le 1er, sans déborder sur le mois suivant
+        $precedent = $debut->subMonthNoOverflow();
+        $finPrecedent = $moisComplet
+            ? $precedent->endOfMonth()
+            : $precedent->addSeconds((int) $debut->diffInSeconds($fin))->min($precedent->endOfMonth());
+
+        $somme = fn (CarbonInterface $du, CarbonInterface $au) => (int) Paiement::valides()->whereBetween('created_at', [$du, $au])->sum('montant');
+        $nom = fn (CarbonInterface $d) => mb_strtolower(Periode::MOIS[$d->month]);
+        $de = fn (string $mois) => preg_match('/^[aeiouéè]/u', $mois) ? "d'{$mois}" : "de {$mois}";
+
+        return [
+            'libelle' => "Chiffre d'affaires ".$de($nom($debut)),
+            'montant' => $somme($debut, $fin),
+            'precedent' => $somme($precedent, $finPrecedent),
+            'reference' => $moisComplet
+                ? 'par rapport à '.$nom($precedent)
+                : 'par rapport à '.$nom($precedent).' à la même date · cumul du 1er au '.$fin->format('d/m'),
+        ];
+    }
+
     public function chiffresPeriode(Periode $p, ?CarbonInterface $jusqua = null): array
     {
         $fin = $p->au->endOfDay();
@@ -261,8 +294,10 @@ class KpiService
 
         foreach ($paiements as $paiement) {
             $cle = $paiement->created_at->format($parMois ? 'Y-m' : 'Y-m-d');
-            if (isset($cases[$cle][$paiement->type])) {
-                $cases[$cle][$paiement->type] += $paiement->montant;
+            // Les carnets Fidélité sont des séances : rangés avec les journaliers
+            $type = $paiement->type === Paiement::TYPE_CARNET ? Paiement::TYPE_JOURNALIER : $paiement->type;
+            if (isset($cases[$cle][$type])) {
+                $cases[$cle][$type] += $paiement->montant;
             }
         }
 
@@ -326,7 +361,7 @@ class KpiService
                 'type' => $p->abonnement ? ($p->abonnement->est_renouvellement ? 'renouvellement' : 'abonnement') : 'passage',
                 'titre' => $p->abonnement
                     ? ($p->abonnement->est_renouvellement ? 'Renouvellement' : 'Abonnement').' '.$p->abonnement->formule->nom
-                    : 'Ticket passage'.($p->quantite > 1 ? ' × '.$p->quantite : ''),
+                    : ($p->estCarnet() ? $p->objet() : 'Ticket passage'.($p->quantite > 1 ? ' × '.$p->quantite : '')),
                 'detail' => $p->client?->nom_complet ?? 'Client anonyme',
                 'client' => $p->client,
             ]);

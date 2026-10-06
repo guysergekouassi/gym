@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
+    <x-icones-app/>
     <title>@yield('title', 'Accueil') · {{ config('salle.nom') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -34,15 +35,16 @@
                 </x-menu-section>
             @endif
 
-            <x-menu-section nom="quotidien" titre="Quotidien">
-                @unless($user->isAdmin())
+            {{-- Menu du travail courant : réservé à la caissière --}}
+            @unless($user->isAdmin())
+                <x-menu-section nom="quotidien" titre="Quotidien">
                     <a href="{{ route('journee') }}" class="{{ $actif('journee') }}"><x-icon name="home"/> Tableau de bord</a>
-                @endunless
-                <a href="{{ route('caisse.index') }}" class="{{ $actif('caisse.*', 'recus.*') }}"><x-icon name="cash"/> Caisse</a>
-                <a href="{{ route('clients.index') }}" class="{{ $actif('clients.*') }}"><x-icon name="users"/> Clients</a>
-                <a href="{{ route('presences.index') }}" class="{{ $actif('presences.*') }}"><x-icon name="clock"/> Entrées / départs</a>
-                <a href="{{ route('accueil.index') }}" target="_blank" rel="noopener" class="nav-link"><x-icon name="fingerprint"/> Écran d'accueil <x-icon name="external" class="ml-auto size-4 opacity-50"/></a>
-            </x-menu-section>
+                    <a href="{{ route('caisse.index') }}" class="{{ $actif('caisse.*', 'recus.*') }}"><x-icon name="cash"/> Caisse</a>
+                    <a href="{{ route('clients.index') }}" class="{{ $actif('clients.*') }}"><x-icon name="users"/> Clients</a>
+                    <a href="{{ route('presences.index') }}" class="{{ $actif('presences.*') }}"><x-icon name="clock"/> Entrées / départs</a>
+                    <a href="{{ route('accueil.index') }}" target="_blank" rel="noopener" class="nav-link"><x-icon name="fingerprint"/> Écran d'accueil <x-icon name="external" class="ml-auto size-4 opacity-50"/></a>
+                </x-menu-section>
+            @endunless
 
             @if($user->isAdmin())
                 <x-menu-section nom="administration" titre="Administration">

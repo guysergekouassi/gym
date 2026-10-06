@@ -32,5 +32,7 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Tarif fixé ici : les tests ne dépendent pas du .env du poste -->
+        <env name="SALLE_TARIF_JOURNALIER" value="2500"/>
     </php>
 </phpunit>

@@ -22,6 +22,8 @@ class DashboardController extends Controller
             'chiffres' => $kpi->chiffresPeriode($periode),
             // Période en cours : comparée à la précédente au même moment (pas à la journée entière)
             'avant' => $kpi->chiffresPeriode($periode->precedente(), $periode->instantComparable()),
+            // Jour ou semaine affiché : on montre aussi le cumul du mois (inutile si la période est déjà le mois)
+            'caMois' => in_array($periode->granularite, ['jour', 'semaine'], true) ? $kpi->chiffreAffairesMois($periode) : null,
             'clientsTotal' => Client::count(),
             'serie' => $kpi->serieRecettes($periode),
             'repartition' => $kpi->repartitionClients($reference),

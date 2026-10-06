@@ -8,7 +8,7 @@
 @endphp
 
 @section('content')
-<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4" data-surveiller="{{ route('presences.version') }}" data-version="{{ $version }}">
     <div>
         <h1 class="text-3xl font-bold tracking-tight text-slate-900">Entrées / départs</h1>
         <p class="mt-1 text-slate-500">1<sup>er</sup> badge du jour = arrivée ; départ = badge fait à partir de l'heure de fin des séances{{ $finDuJour ? ' ('.$finDuJour.' aujourd\'hui)' : '' }}. Heures à la seconde près.</p>

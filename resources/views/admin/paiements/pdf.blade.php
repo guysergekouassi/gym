@@ -61,7 +61,7 @@
             <td>{{ $p->created_at->format('d/m/Y H:i') }}</td>
             <td>{{ $p->user?->name ?? '—' }}</td>
             <td>{{ $p->client?->nom_complet ?? 'Anonyme' }}</td>
-            <td>{{ $p->abonnement ? 'Abonnement '.$p->abonnement->formule->nom : 'Passage'.($p->quantite > 1 ? ' × '.$p->quantite : '') }}</td>
+            <td>{{ $p->objet() }}</td>
             <td>{{ Paiement::MODES[$p->mode] ?? $p->mode }}</td>
             <td>{{ $p->reference }}</td>
             <td class="droite">{{ Fcfa::format($p->montant) }}</td>

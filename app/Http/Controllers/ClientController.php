@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Abonnement;
 use App\Models\Client;
+use App\Models\Formule;
 use App\Models\Passage;
+use App\Services\CaisseService;
 use App\Services\KpiService;
 use App\Services\SynchroPointeuseService;
 use App\Support\Empreinte;
@@ -19,7 +21,10 @@ use Illuminate\View\View;
 
 class ClientController extends Controller
 {
-    public function __construct(private SynchroPointeuseService $pointeuse) {}
+    public function __construct(
+        private SynchroPointeuseService $pointeuse,
+        private CaisseService $caisse,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -73,16 +78,18 @@ class ClientController extends Controller
                 Client::TYPE_JOURNALIER => Client::journaliers()->count(),
             ],
             'numeroSuggere' => Empreinte::prochainNumero(),
-            'masques' => $masques,
+            'masques'       => $masques,
             'nombreMasques' => $request->user()->isAdmin() ? Client::onlyTrashed()->count() : 0,
+            'formules'      => \App\Models\Formule::where('actif', true)->orderBy('prix')->get(),
         ]);
     }
 
     public function create(): View
     {
         return view('clients.form', [
-            'client' => new Client(['type' => Client::TYPE_ABONNE]),
+            'client'        => new Client(['type' => Client::TYPE_ABONNE]),
             'numeroSuggere' => Empreinte::prochainNumero(),
+            'formules'      => Formule::where('actif', true)->orderBy('prix')->get(),
         ]);
     }
 
@@ -94,9 +101,25 @@ class ClientController extends Controller
             $data['photo_path'] = $this->stockerPhoto($request->file('photo'));
         }
 
-        $data['date_adhesion'] ??= today(); // par défaut : inscrit aujourd'hui
+        $data['date_adhesion'] ??= today();
         $client = Client::create($data);
         $this->pointeuse->ajouterOuModifier($client);
+
+        // Souscription directe si une formule a été choisie dans le formulaire
+        $formuleId = $request->input('formule_id');
+        if ($formuleId && $data['type'] === Client::TYPE_ABONNE) {
+            $request->validate([
+                'formule_id' => ['required', 'exists:formules,id'],
+            ]);
+            $formule = Formule::findOrFail($formuleId);
+            $this->caisse->souscrireAbonnement($client, $formule, [
+                'mode'      => 'especes',
+                'reference' => $request->input('reference'),
+            ], $request->user());
+
+            return redirect()->route('clients.show', $client)
+                ->with('succes', 'Client enregistré et abonnement souscrit avec succès.');
+        }
 
         if ($request->boolean('abonner') || $request->input('apres') === 'abonner') {
             return redirect()->route('caisse.index', ['client_id' => $client->id])
@@ -124,7 +147,11 @@ class ClientController extends Controller
 
     public function edit(Client $client): View
     {
-        return view('clients.form', ['client' => $client, 'numeroSuggere' => Empreinte::prochainNumero()]);
+        return view('clients.form', [
+            'client'        => $client,
+            'numeroSuggere' => Empreinte::prochainNumero(),
+            'formules'      => collect(), // non utilisé en édition
+        ]);
     }
 
     public function update(Request $request, Client $client): RedirectResponse

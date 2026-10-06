@@ -56,6 +56,8 @@ function afficher(p) {
 
     if (p.fin_droits) {
         el('droits').textContent = `Abonnement valide jusqu'au ${p.fin_droits} · ${p.jours_restants} jour(s) restant(s)`;
+    } else if (p.seances_carnet !== null && p.seances_carnet !== undefined) {
+        el('droits').textContent = `Carnet Fidélité : ${p.seances_carnet} séance(s) restante(s)`;
     } else {
         el('droits').textContent = p.autorise && p.methode === 'caisse' ? 'Entrée journalière réglée' : '';
     }

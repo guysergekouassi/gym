@@ -12,6 +12,8 @@ use Carbon\CarbonInterface;
 
 class PointageService
 {
+    public function __construct(private SynchroPointeuseService $synchro) {}
+
     /**
      * Passage à la pointeuse : doigt (ou carte) reconnu par l'appareil, qui transmet
      * le n° d'utilisateur. Sources : la pointeuse en réseau (protocole Cloud/ADMS),
@@ -61,19 +63,29 @@ class PointageService
             return $recent;
         }
 
-        [$autorise, $motif] = $this->verifierDroit($client, $quand);
+        [$autorise, $motif, $carnet] = $this->verifierDroit($client, $quand);
+        $sens = $autorise ? $this->sens($client, $quand) : null;
 
-        return $this->enregistrer([
+        $passage = $this->enregistrer([
             'client_id' => $client->id,
             'lecteur_id' => $lecteur?->id,
             'user_id' => $poste?->id,
+            // L'arrivée décompte une séance du carnet Fidélité
+            'paiement_id' => $sens === Passage::SENS_ENTREE ? $carnet?->id : null,
             'methode' => Passage::METHODE_EMPREINTE,
             'statut' => $autorise ? Passage::STATUT_AUTORISE : Passage::STATUT_REFUSE,
-            'sens' => $autorise ? $this->sens($client, $quand) : null,
+            'sens' => $sens,
             'motif' => $motif,
             'empreinte_id' => $empreinteId,
             'passe_le' => $quand,
         ]);
+
+        // La pointeuse suit : séance de carnet décomptée, ou passe 1 séance/jour terminée (accès fermé jusqu'à demain)
+        if ($passage->paiement_id || ($sens === Passage::SENS_DEPART && $client->seanceDuJourFaite($quand))) {
+            $this->synchro->ajouterOuModifier($client);
+        }
+
+        return $passage;
     }
 
     /** Membre reconnu par la pointeuse mais refusé par elle (période de validité dépassée…). */
@@ -130,6 +142,7 @@ class PointageService
     /**
      * 1er badge autorisé du jour = arrivée ; départ = badge suivant fait à partir de l'heure
      * de fin des séances du jour (Paramètres) ; tout autre badge = séance déjà enregistrée.
+     * Passe « 1 séance par jour » : le 2e badge est toujours le départ, à toute heure.
      */
     private function sens(Client $client, CarbonInterface $quand): string
     {
@@ -145,30 +158,39 @@ class PointageService
 
         // Le départ ne se badge qu'à partir de l'heure de fin des séances (si elle est renseignée)
         $fin = Horaires::finDuJour($quand);
-        if ($dejaBadge === 1 && ($fin === null || $quand->format('H:i') >= $fin)) {
+        $uneSeanceParJour = (bool) $client->abonnementLe($quand)?->formule?->uneSeanceParJour();
+        if ($dejaBadge === 1 && ($uneSeanceParJour || $fin === null || $quand->format('H:i') >= $fin)) {
             return Passage::SENS_DEPART;
         }
 
         return Passage::SENS_DEJA;
     }
 
-    /** @return array{0: bool, 1: ?string} */
+    /**
+     * Droit d'entrée, dans l'ordre : abonnement en cours, ticket du jour, carnet Fidélité.
+     *
+     * @return array{0: bool, 1: ?string, 2: ?Paiement} autorisé, motif du refus, carnet à décompter
+     */
     private function verifierDroit(Client $client, CarbonInterface $quand): array
     {
-        if ($client->type === Client::TYPE_ABONNE) {
-            $valide = $client->abonnements()->enCours($quand)->exists();
-
-            return $valide ? [true, null] : [false, 'abonnement_expire'];
+        if ($client->type === Client::TYPE_ABONNE && $client->abonnementLe($quand)) {
+            return $client->seanceDuJourFaite($quand) ? [false, 'seance_du_jour_faite', null] : [true, null, null];
         }
 
-        // Journalier enrôlé : il doit avoir payé (et non annulé) le jour même
-        $aPaye = $client->paiements()
-            ->valides()
-            ->where('type', Paiement::TYPE_JOURNALIER)
-            ->whereDate('created_at', $quand->toDateString())
-            ->exists();
+        // Ticket payé ce jour-là, ou séance de carnet déjà décomptée aujourd'hui (départ, retour)
+        if ($client->aPayeJournalierLe($quand) || $client->carnetUtiliseLe($quand)) {
+            return [true, null, null];
+        }
 
-        return $aPaye ? [true, null] : [false, 'paiement_requis'];
+        if ($carnet = $client->carnetEnCours()) {
+            return [true, null, $carnet];
+        }
+
+        return match (true) {
+            $client->carnets()->isNotEmpty() => [false, 'carnet_epuise', null],
+            $client->type === Client::TYPE_ABONNE => [false, 'abonnement_expire', null],
+            default => [false, 'paiement_requis', null],
+        };
     }
 
     private function enregistrer(array $attributs): Passage

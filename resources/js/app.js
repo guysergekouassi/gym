@@ -86,8 +86,10 @@ $$('[data-calcul-passage]').forEach((form) => {
     const prix = Number(form.dataset.prix);
     const champ = form.querySelector('[data-quantite]');
     const maj = () => {
-        let q = Math.round(Number(champ.value) || 1);
-        q = Math.min(10, Math.max(1, q));
+        // Bornes lues sur le champ : 1 à 10 tickets, ou 5 à 100 séances pour un carnet
+        const min = Number(champ.min) || 1;
+        let q = Math.round(Number(champ.value) || min);
+        q = Math.min(Number(champ.max) || 10, Math.max(min, q));
         champ.value = q;
         $$('[data-total], [data-total-court]', form).forEach((el) => { el.textContent = fcfa(prix * q); });
         $$('[data-recap-quantite]', form).forEach((el) => { el.textContent = q; });
@@ -411,6 +413,29 @@ $$('[data-horaire]').forEach((ligne) => {
     etat.addEventListener('change', majHoraire);
     ligne.querySelector('[data-horaire-effacer]').addEventListener('click', () => { etat.value = ''; majHoraire(); });
 });
+
+// Entrées / départs : la page se recharge dès qu'un nouveau passage arrive.
+// Petite question au serveur toutes les 2 s ; on attend la fin d'une saisie ou d'une fenêtre ouverte.
+const surveille = document.querySelector('[data-surveiller]');
+if (surveille) {
+    const verifier = async () => {
+        try {
+            if (!document.hidden) {
+                const reponse = await fetch(surveille.dataset.surveiller, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                if (reponse.status === 401 || reponse.status === 419) { window.location.reload(); return; }
+                if (reponse.ok) {
+                    const { version } = await reponse.json();
+                    const occupe = document.activeElement?.closest('form') || document.querySelector('dialog[open]');
+                    if (String(version) !== surveille.dataset.version && !occupe) { window.location.reload(); return; }
+                }
+            }
+        } catch (erreur) {
+            console.error('Entrées / départs : vérification impossible', erreur);
+        }
+        setTimeout(verifier, 2000);
+    };
+    setTimeout(verifier, 2000);
+}
 
 // Page Pointeuses : tant que des envois sont en attente, la page se recharge seule
 // (sauf si on est en train de remplir un formulaire)

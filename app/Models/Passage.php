@@ -22,6 +22,8 @@ class Passage extends Model
         'empreinte_inconnue' => 'Empreinte non reconnue',
         'abonnement_expire' => 'Abonnement expiré ou inexistant',
         'paiement_requis' => 'Paiement journalier requis à la caisse',
+        'carnet_epuise' => 'Carnet Fidélité épuisé : passez à la caisse',
+        'seance_du_jour_faite' => 'Séance du jour déjà faite (passe 1 séance par jour)',
         'refus_pointeuse' => 'Accès refusé par la pointeuse',
     ];
 

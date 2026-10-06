@@ -32,6 +32,17 @@
                         <div class="sm:col-span-2">
                             <button type="submit" class="btn-light w-full">Enregistrer</button>
                         </div>
+                        <div class="sm:col-span-3">
+                            <label class="label text-xs">Accès</label>
+                            <select name="seances_par_jour" class="input">
+                                <option value="">Illimité</option>
+                                <option value="1" @selected($formule->uneSeanceParJour())>1 séance par jour</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-9">
+                            <label class="label text-xs">Avantages <span class="font-normal text-slate-400">(un par ligne : affichés à la caisse et sur le ticket)</span></label>
+                            <textarea name="description" rows="2" maxlength="1000" class="input" placeholder="ex. 2 serviettes offertes">{{ $formule->description }}</textarea>
+                        </div>
                         <p class="flex items-center justify-between gap-3 text-xs text-slate-500 sm:col-span-12"><span>{{ $formule->abonnes_en_cours }} abonnement(s) en cours sur cette formule{{ $formule->actif ? '' : ' · formule masquée à la caisse' }}</span>
                             <button type="submit" form="supprimer-formule-{{ $formule->id }}" class="font-semibold text-red-600 hover:underline">Supprimer</button></p>
                     </form>
@@ -50,6 +61,14 @@
                 <div class="sm:col-span-2"><label class="label text-xs" for="n-duree">Durée (jours)</label><input id="n-duree" type="number" name="duree_jours" min="1" max="730" required class="input" placeholder="30"></div>
                 <div class="sm:col-span-3"><label class="label text-xs" for="n-prix">Prix (FCFA)</label><input id="n-prix" type="number" name="prix" min="0" max="10000000" step="500" required class="input" placeholder="15000"></div>
                 <div class="sm:col-span-2"><button type="submit" class="btn-primary w-full"><x-icon name="plus" class="size-4"/> Ajouter</button></div>
+                <div class="sm:col-span-3">
+                    <label class="label text-xs" for="n-acces">Accès</label>
+                    <select id="n-acces" name="seances_par_jour" class="input">
+                        <option value="">Illimité</option>
+                        <option value="1">1 séance par jour</option>
+                    </select>
+                </div>
+                <div class="sm:col-span-9"><label class="label text-xs" for="n-avantages">Avantages <span class="font-normal text-slate-400">(un par ligne)</span></label><textarea id="n-avantages" name="description" rows="2" maxlength="1000" class="input" placeholder="ex. 1 serviette offerte pendant la durée de l'abonnement"></textarea></div>
             </div>
         </form>
     </div>
@@ -58,13 +77,19 @@
         @csrf @method('PUT')
         <div class="card-header"><h2 class="card-title flex items-center gap-2"><x-icon name="bolt" class="size-5 text-brand-500"/> Passage journalier</h2></div>
         <div class="card-body space-y-4">
-            <p class="text-sm text-slate-600">Prix d'une séance à l'unité. La caissière ne peut pas le modifier : il est appliqué automatiquement.</p>
+            <p class="text-sm text-slate-600">Prix d'une séance. La caissière ne peut pas le modifier : il est appliqué automatiquement.</p>
             <div>
-                <label for="tarif_journalier" class="label">Tarif (FCFA)</label>
+                <label for="tarif_journalier" class="label">Journalier Visiteur (FCFA)</label>
                 <input id="tarif_journalier" type="number" name="tarif_journalier" value="{{ $tarifJournalier }}" min="0" max="1000000" step="100" required class="input text-lg font-bold">
+                <p class="mt-1 text-xs text-slate-500">Séance payée le jour même.</p>
+            </div>
+            <div>
+                <label for="tarif_fidelite" class="label">Journalier Fidélité (FCFA)</label>
+                <input id="tarif_fidelite" type="number" name="tarif_fidelite" value="{{ $tarifFidelite }}" min="0" max="1000000" step="100" required class="input text-lg font-bold">
+                <p class="mt-1 text-xs text-slate-500">Prix par séance d'un carnet ({{ $carnetMin }} séances minimum payées d'avance).</p>
             </div>
             <button type="submit" class="btn-primary w-full">Mettre à jour</button>
-            <p class="text-center text-xs text-slate-500">Actuel : {{ Fcfa::format($tarifJournalier) }}</p>
+            <p class="text-center text-xs text-slate-500">Actuel : {{ Fcfa::format($tarifJournalier) }} · Fidélité {{ Fcfa::format($tarifFidelite) }}</p>
         </div>
     </form>
 </div>

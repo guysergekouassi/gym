@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 class Parametre extends Model
 {
     public const TARIF_JOURNALIER = 'tarif_journalier';
+    public const TARIF_FIDELITE = 'tarif_fidelite';
 
     /** Réglages de la salle qui remplacent les valeurs de config/salle.php. */
     public const SALLE = [
@@ -62,5 +63,11 @@ class Parametre extends Model
     public static function tarifJournalier(): int
     {
         return (int) self::valeur(self::TARIF_JOURNALIER, config('salle.tarif_journalier'));
+    }
+
+    /** Prix d'une séance du carnet Fidélité (séances payées d'avance). */
+    public static function tarifFidelite(): int
+    {
+        return (int) self::valeur(self::TARIF_FIDELITE, config('salle.tarif_fidelite'));
     }
 }

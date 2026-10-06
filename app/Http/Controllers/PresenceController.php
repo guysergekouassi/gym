@@ -9,6 +9,7 @@ use App\Support\Periode;
 use App\Support\Recherche;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -44,6 +45,7 @@ class PresenceController extends Controller
         $salleFermee = Horaires::estFermeA(CarbonImmutable::now());
 
         return view('presences.index', [
+            'version' => $this->derniereVersion(),
             'periode' => $periode,
             'annees' => Exercices::disponibles(),
             'lignes' => $lignes,
@@ -60,6 +62,18 @@ class PresenceController extends Controller
                 'refus' => Passage::where('statut', Passage::STATUT_REFUSE)->whereBetween('passe_le', $bornes)->count(),
             ],
         ]);
+    }
+
+    /** Interrogé toutes les 2 s par la page : elle se recharge dès que la version change. */
+    public function version(): JsonResponse
+    {
+        return response()->json(['version' => $this->derniereVersion()]);
+    }
+
+    /** Change à chaque nouveau passage (arrivée, départ, refus) : chacun crée une ligne. */
+    private function derniereVersion(): int
+    {
+        return (int) Passage::max('id');
     }
 
     /** Arrivées, avec l'heure du départ du même client le même jour (sous-requête). */

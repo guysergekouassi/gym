@@ -57,10 +57,7 @@ class RecuService
             $imprimante->text('Date     : '.$paiement->created_at->format('d/m/Y H:i')."\n");
             $imprimante->text('Client   : '.$t($paiement->client?->nom_complet ?? 'Client journalier')."\n");
 
-            $libelle = $paiement->abonnement
-                ? 'Abonnement '.$paiement->abonnement->formule->nom
-                : 'Entree journaliere'.($paiement->quantite > 1 ? ' x '.$paiement->quantite : '');
-            $imprimante->text('Objet    : '.$t($libelle)."\n");
+            $imprimante->text('Objet    : '.$t($paiement->objet())."\n");
 
             if ($paiement->abonnement) {
                 $imprimante->text('Validite : '.$paiement->abonnement->date_debut->format('d/m/Y')

@@ -74,6 +74,7 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
         Route::get('/caisse', [CaisseController::class, 'index'])->name('caisse.index');
         Route::post('/caisse/journalier', [CaisseController::class, 'journalier'])->middleware('throttle:30,1')->name('caisse.journalier');
         Route::post('/caisse/abonnement', [CaisseController::class, 'abonnement'])->middleware('throttle:30,1')->name('caisse.abonnement');
+        Route::post('/caisse/carnet', [CaisseController::class, 'carnet'])->middleware('throttle:30,1')->name('caisse.carnet');
         Route::get('/caisse/clients', [CaisseController::class, 'clients'])->middleware('throttle:120,1')->name('caisse.clients');
 
         Route::get('/recus/{paiement}', [RecuController::class, 'show'])->name('recus.show');
@@ -81,6 +82,7 @@ Route::middleware(['auth', 'mdp.change'])->group(function () {
         Route::resource('clients', ClientController::class)->except('destroy');
 
         Route::get('/entrees-departs', [PresenceController::class, 'index'])->name('presences.index');
+        Route::get('/entrees-departs/version', [PresenceController::class, 'version'])->middleware('throttle:120,1')->name('presences.version');
 
         Route::get('/accueil', [AccueilController::class, 'index'])->name('accueil.index');
         Route::get('/accueil/dernier', [AccueilController::class, 'dernier'])->name('accueil.dernier');

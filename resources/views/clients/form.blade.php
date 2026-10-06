@@ -65,7 +65,9 @@
                     <div class="grid grid-cols-2 gap-2">
                         @foreach(Client::TYPES as $valeur => $libelle)
                             <label class="choice items-center text-center text-sm font-semibold">
-                                <input type="radio" name="type" value="{{ $valeur }}" required @checked(old('type', $client->type) === $valeur)>
+                                <input type="radio" name="type" value="{{ $valeur }}" required
+                                       @checked(old('type', $client->type) === $valeur)
+                                       data-toggle-abonnement="{{ $valeur === Client::TYPE_ABONNE ? '1' : '0' }}">
                                 {{ $libelle }}
                             </label>
                         @endforeach
@@ -82,6 +84,41 @@
             </div>
         </div>
 
+        {{-- Bloc abonnement : visible uniquement pour les abonnés, caché pour les journaliers --}}
+        @if(! $client->exists)
+        <div id="bloc-abonnement" class="card" style="display: {{ old('type', $client->type) === Client::TYPE_ABONNE ? 'block' : 'none' }}">
+            <div class="card-header"><h2 class="card-title">Abonnement immédiat <span class="text-sm font-normal opacity-60">(optionnel)</span></h2></div>
+            <div class="card-body space-y-5">
+                <div>
+                    <label for="formule_id" class="label">Formule</label>
+                    <select id="formule_id" name="formule_id" class="input">
+                        <option value="">— Choisir une formule —</option>
+                        @foreach($formules as $formule)
+                            <option value="{{ $formule->id }}"
+                                    data-prix="{{ number_format($formule->prix, 0, ',', ' ') }}"
+                                    data-resume="{{ $formule->resume() }}"
+                                    @selected(old('formule_id') == $formule->id)>
+                                {{ $formule->nom }} — {{ number_format($formule->prix, 0, ',', ' ') }} FCFA ({{ $formule->resume() }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div id="bloc-paiement-abonnement" style="display: {{ old('formule_id') ? 'block' : 'none' }}" class="space-y-4">
+                    <div>
+                        <label for="reference" class="label">Référence / N° transaction <span class="opacity-50">(optionnel)</span></label>
+                        <input id="reference" type="text" name="reference" maxlength="100"
+                               value="{{ old('reference') }}" class="input" placeholder="ex. Wave #123456">
+                    </div>
+                    <div id="apercu-formule" class="rounded-lg bg-primary/10 border border-primary/20 p-4 text-sm space-y-1 hidden">
+                        <div class="font-semibold text-primary" id="apercu-nom"></div>
+                        <div class="opacity-70" id="apercu-detail"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <div class="card">
             <div class="card-header"><h2 class="card-title">Photo</h2></div>
             <div class="card-body">
@@ -95,4 +132,45 @@
         </div>
     </div>
 </form>
+
+@push('scripts')
+<script>
+(function () {
+    const blocAbonnement  = document.getElementById('bloc-abonnement');
+    const blocPaiement    = document.getElementById('bloc-paiement-abonnement');
+    const selectFormule   = document.getElementById('formule_id');
+    const apercuBox       = document.getElementById('apercu-formule');
+    const apercuNom       = document.getElementById('apercu-nom');
+    const apercuDetail    = document.getElementById('apercu-detail');
+
+    // Afficher / masquer le bloc abonnement selon le type choisi
+    document.querySelectorAll('input[name="type"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const estAbonne = radio.dataset.toggleAbonnement === '1' && radio.checked;
+            if (blocAbonnement) blocAbonnement.style.display = estAbonne ? 'block' : 'none';
+            if (!estAbonne && selectFormule) selectFormule.value = '';
+            if (!estAbonne && blocPaiement) blocPaiement.style.display = 'none';
+        });
+    });
+
+    // Afficher le bloc paiement dès qu'une formule est choisie
+    if (selectFormule) {
+        selectFormule.addEventListener('change', () => {
+            const opt = selectFormule.selectedOptions[0];
+            if (opt && opt.value) {
+                blocPaiement.style.display = 'block';
+                apercuNom.textContent    = opt.text.split('—')[0].trim();
+                apercuDetail.textContent = opt.dataset.resume + ' · ' + opt.dataset.prix + ' FCFA';
+                apercuBox.classList.remove('hidden');
+            } else {
+                blocPaiement.style.display = 'none';
+                apercuBox.classList.add('hidden');
+            }
+        });
+        // Déclencher au chargement si old('formule_id') est présent
+        if (selectFormule.value) selectFormule.dispatchEvent(new Event('change'));
+    }
+})();
+</script>
+@endpush
 @endsection

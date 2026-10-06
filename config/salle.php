@@ -13,6 +13,10 @@ return [
     // Tarif initial d'une entrée journalière (FCFA) — ensuite modifiable par l'admin dans l'application
     'tarif_journalier' => (int) env('SALLE_TARIF_JOURNALIER', 2000),
 
+    // Carnet Fidélité : séances payées d'avance, au prix réduit, à partir d'un minimum de séances
+    'tarif_fidelite' => (int) env('SALLE_TARIF_FIDELITE', 2000),
+    'carnet_min_seances' => (int) env('SALLE_CARNET_MIN_SEANCES', 5),
+
     'kpi' => [
         'actif_jours' => (int) env('KPI_ACTIF_JOURS', 7),               // venu au moins 1 fois sur X jours
         'inactif_jours' => (int) env('KPI_INACTIF_JOURS', 14),          // aucune venue depuis X jours

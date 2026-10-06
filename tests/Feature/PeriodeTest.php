@@ -92,18 +92,51 @@ class PeriodeTest extends TestCase
         $tarif = Paiement::latest('id')->value('montant');
 
         $this->get('/dashboard')->assertOk()
-            ->assertSee('Revenus du jour')
+            ->assertSee("Chiffre d'affaires du jour")
             ->assertViewHas('chiffres', fn ($c) => $c['recette'] === $tarif && $c['tickets'] === 1);
 
         $this->get('/dashboard?annee='.now()->year.'&mois='.now()->month)
-            ->assertSee('Revenus du mois')->assertDontSee('Revenus du jour')
+            ->assertSee("Chiffre d'affaires du mois")->assertDontSee("Chiffre d'affaires du jour")
             ->assertViewHas('avant', fn ($c) => $c['recette'] === $tarif);
 
         $this->get('/dashboard?mode=periode&du='.now()->subMonths(2)->toDateString().'&au='.now()->toDateString())
-            ->assertSee('Revenus de la période')
+            ->assertSee("Chiffre d'affaires de la période")
             ->assertViewHas('chiffres', fn ($c) => $c['recette'] === 2 * $tarif);
 
         $this->get('/admin/paiements?annee='.now()->year.'&mois=')->assertOk()->assertViewHas('nombre', 2);
+    }
+
+    public function test_chiffre_affaires_du_mois_a_cote_de_celui_du_jour(): void
+    {
+        $this->seed();
+        User::query()->update(['doit_changer_mdp' => false]);
+        $admin = User::where('role', User::ROLE_ADMIN)->firstOrFail();
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 12:00:00'));
+
+        $client = Client::create(['nom' => 'Payeur', 'type' => Client::TYPE_JOURNALIER]);
+        foreach (['2026-09-03 09:00:00' => 5000, '2026-09-20 09:00:00' => 7000, '2026-10-02 09:00:00' => 10000, '2026-10-05 10:00:00' => 2500] as $quand => $montant) {
+            $p = Paiement::create(['client_id' => $client->id, 'user_id' => $admin->id, 'type' => Paiement::TYPE_JOURNALIER, 'montant' => $montant, 'mode' => 'especes', 'numero_recu' => 'R-'.$montant]);
+            $p->forceFill(['created_at' => $quand])->save();
+        }
+
+        // Aujourd'hui : CA du jour 2 500, CA d'octobre 12 500 (1er → maintenant) contre septembre au même moment (1er → 5 à midi)
+        $this->actingAs($admin)->get('/dashboard')->assertOk()
+            ->assertSee("Chiffre d'affaires du jour")->assertSee("Chiffre d'affaires d'octobre")
+            ->assertViewHas('chiffres', fn ($c) => $c['recette'] === 2500)
+            ->assertViewHas('caMois', fn ($m) => [$m['montant'], $m['precedent']] === [12500, 5000]
+                && $m['reference'] === 'par rapport à septembre à la même date · cumul du 1er au 05/10');
+
+        // Un jour passé : cumul du mois jusqu'à ce jour-là
+        $this->get('/dashboard?annee=2026&mois=10&jour=2')
+            ->assertViewHas('caMois', fn ($m) => [$m['montant'], $m['precedent']] === [10000, 0]);
+
+        // Septembre entier : mois complet contre août complet
+        $this->get('/dashboard?annee=2026&mois=9&jour=30')
+            ->assertSee("Chiffre d'affaires de septembre")
+            ->assertViewHas('caMois', fn ($m) => [$m['montant'], $m['reference']] === [12000, 'par rapport à août']);
+
+        // Le mois choisi : la tuile principale est déjà le chiffre du mois
+        $this->get('/dashboard?annee=2026&mois=10')->assertViewHas('caMois', null);
     }
 
     public function test_comparaison_a_la_meme_heure(): void

@@ -254,6 +254,10 @@ Ensuite : appui long sur **OK/MENU**, puis posez ce doigt : le menu s'ouvre. Si 
 | Autre badge (avant l'heure de fin, ou après le départ) | « Authenticated » + nom | **Orange** « Déjà enregistré » |
 | Abonnement terminé | Refus | **Rouge** « Abonnement expiré » |
 | Journalier qui a payé aujourd'hui | Réussie | **Vert** |
+| Carnet Fidélité, arrivée du jour (une séance décomptée) | Réussie | **Vert**, séances restantes |
+| Carnet Fidélité vide | Refus | **Rouge** « Carnet Fidélité épuisé » |
+| Passe « 1 séance par jour » : 2e badge (à toute heure) | Réussie | **Bleu** « À bientôt ! » |
+| Passe « 1 séance par jour » : retour le même jour après le départ | Refus (jusqu'au lendemain) | **Rouge** « Séance du jour déjà faite » |
 | Doigt non enregistré | Refus | **Rouge** « Empreinte non reconnue » |
 
 L'écran de la pointeuse affiche son **propre logiciel Hikvision**, pas GymFlow : il montre toujours le nom et « Authenticated », sans message personnalisé (la pointeuse décide seule, avant que GymFlow ne reçoive le passage). GymFlow s'affiche sur le PC : menu **Écran d'accueil**, à mettre en plein écran sur un 2ᵉ écran tourné vers les clients si vous en avez un.

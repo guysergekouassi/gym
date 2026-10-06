@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
+    <x-icones-app/>
     <title>Connexion · {{ config('salle.nom') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -18,6 +19,7 @@
 
     <div class="relative flex min-h-screen items-end justify-center px-6 pb-10 lg:items-center lg:justify-end lg:px-[4.5vw] lg:pb-0">
         <div class="w-full max-w-md lg:w-[30vw] lg:max-w-[500px]">
+            <img src="{{ asset('images/logo-epikaizo.png') }}" alt="{{ config('salle.nom') }}" class="mb-8" style="height: 7rem; width: auto">
             {{-- Sur mobile, le slogan de l'image est hors cadre : on le reprend en texte --}}
             <p class="mb-8 text-3xl font-extrabold leading-tight text-white lg:hidden" aria-hidden="true">
                 Votre progression,<br><span class="text-emerald-400">notre priorité !</span>

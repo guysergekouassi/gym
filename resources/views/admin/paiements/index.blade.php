@@ -80,7 +80,7 @@
                         @endif
                     </td>
                     <td>{{ $p->client?->nom_complet ?? 'Anonyme' }}</td>
-                    <td>{{ $p->abonnement ? 'Abonnement '.$p->abonnement->formule->nom : 'Passage'.($p->quantite > 1 ? ' × '.$p->quantite : '') }}</td>
+                    <td>{{ $p->objet() }}</td>
                     <td>{{ Paiement::MODES[$p->mode] ?? $p->mode }}@if($p->reference)<span class="block font-mono text-xs text-slate-400">{{ $p->reference }}</span>@endif</td>
                     <td class="whitespace-nowrap text-right font-semibold {{ $p->estAnnule() ? 'text-slate-400 line-through' : '' }}">{{ Fcfa::format($p->montant) }}</td>
                     <td class="text-right">
